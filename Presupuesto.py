@@ -297,7 +297,7 @@ if st.session_state.current_user is None:
     st.markdown("""
     <div style='text-align: center; padding: 2rem 0 1rem 0;'>
       <h1 style='color: #00385C; margin: 0;'>💼 OptiBudget Pro</h1>
-      <p style='color: #18688D; font-size: 1.05rem;'>Control financiero inteligente con seguridad militar.</p>
+      <p style='color: #18688D; font-size: 1.05rem;'>Control financiero inteligente con seguridad criptográfica</p>
     </div>
     """, unsafe_allow_html=True)
     
