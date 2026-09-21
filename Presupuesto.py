@@ -23,9 +23,9 @@ st.set_page_config(
 )
 
 # ==========================================
-# 2. ESTILOS CSS - FORZAR FONDO BLANCO Y ALTO CONTRASTE
+# 2. ESTILOS CSS - FONDO BLANCO Y ALTO CONTRASTE
 # ==========================================
-st.markdown("""
+st.markdown('''
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&display=swap');
 
@@ -56,18 +56,17 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"]
   color: #1E293B !important;
 }
 
-/* Forzar que todos los textos sean oscuros y legibles */
+/* Forzar textos oscuros */
 p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
   color: #1E293B !important;
 }
 
-/* Sidebar styling */
+/* Barra lateral */
 [data-testid="stSidebar"] {
   background-color: #F8FAFC !important;
   border-right: 1.5px solid #E2E8F0 !important;
 }
 
-/* Tarjetas y banners */
 .main-header-banner {
   background: linear-gradient(135deg, #00385C, #0F4F7F) !important;
   color: #FFFFFF !important;
@@ -150,7 +149,7 @@ p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
   border-left: 4px solid #00385C !important;
 }
 
-/* Forzar que los DataFrames y DataEditors no se muestren negros */
+/* DataFrames y DataEditors claros */
 [data-testid="stDataFrame"], [data-testid="stDataEditor"], div[data-testid="stDataEditor"] > div {
   background-color: #FFFFFF !important;
   border-radius: 8px;
@@ -162,7 +161,7 @@ div[data-baseweb="select"] > div, input {
   border-color: #CBD5E1 !important;
 }
 </style>
-""", unsafe_allow_html=True)
+''', unsafe_allow_html=True)
 
 # ==========================================
 # 3. SEGURIDAD Y GESTIÓN DE SESIONES
@@ -181,7 +180,7 @@ CHRONO_MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
                  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
 def create_initial_example_month():
-    """Crea un mes con SOLO 1 fila de ejemplo por concepto, sin presupuesto y con valores en 0.0"""
+    """Crea un mes con solo 1 fila de ejemplo por concepto, sin presupuesto y con valores en 0.0"""
     return {
         "ingresos": pd.DataFrame([
             {"Check": False, "Descripción": "Salario / Ingreso Principal", "Actual": 0.0}
@@ -225,7 +224,7 @@ def clone_structure_from_month(source_month_data):
         "seguimiento": new_seg
     }
 
-DATA_VERSION = "v5_clean_no_presupuesto_2cols"
+DATA_VERSION = "v6_fixed_title_arg"
 
 def init_system_state():
     if "data_schema_version" not in st.session_state or st.session_state.data_schema_version != DATA_VERSION:
@@ -272,7 +271,6 @@ def init_system_state():
 init_system_state()
 
 def init_user_finances(email):
-    """Inicializa al usuario solo con el año 2026 y solo con el mes de Enero limpio"""
     if email not in st.session_state.finances:
         st.session_state.finances[email] = {
             2026: {
@@ -293,12 +291,12 @@ def send_security_alert(target_email, event_type, details):
 # 4. PANTALLA DE ACCESO (LOGIN & REGISTRO)
 # ==========================================
 if st.session_state.current_user is None:
-    st.markdown("""
+    st.markdown('''
     <div style='text-align: center; padding: 2.5rem 0 1rem 0;'>
       <h1 style='color: #00385C !important; font-size: 2.4rem; font-weight: 800; margin: 0;'>💼 OptiBudget Pro</h1>
       <p style='color: #18688D !important; font-size: 1.05rem; margin-top: 6px;'>Gestión Financiera Multi-Horizonte con Seguridad Avanzada</p>
     </div>
-    """, unsafe_allow_html=True)
+    ''', unsafe_allow_html=True)
     
     col_l, col_c, col_r = st.columns([1, 1.4, 1])
     with col_c:
@@ -374,21 +372,21 @@ init_user_finances(current_email)
 user_fin = st.session_state.finances[current_email]
 
 with st.sidebar:
-    st.markdown("""
+    st.markdown('''
     <div style='text-align: center; margin-bottom: 0.8rem;'>
       <div style='font-size: 1.35rem; font-weight: 800; color: #00385C;'>💼 OptiBudget Pro</div>
       <div style='font-size: 0.82rem; color: #18688D;'>Finanzas Inteligentes Año a Año</div>
     </div>
-    """, unsafe_allow_html=True)
+    ''', unsafe_allow_html=True)
 
-    st.markdown(f"""
+    st.markdown(f'''
     <div style='background: #FFFFFF; border: 1.5px solid #A0DFF7; padding: 12px; border-radius: 8px; margin-bottom: 1rem;'>
       <div style='font-size: 0.78rem; color: #0A405F; font-weight: 700;'>USUARIO ACTIVO</div>
       <div style='font-size: 1.05rem; color: #00385C; font-weight: 700;'>{user_info['name']}</div>
       <div style='font-size: 0.82rem; color: #18688D;'>{current_email}</div>
       <span style='background: #00385C; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;'>{user_info['role']}</span>
     </div>
-    """, unsafe_allow_html=True)
+    ''', unsafe_allow_html=True)
     
     # GESTIÓN DE AÑOS
     st.markdown("### 📅 Gestión de Años")
@@ -479,45 +477,46 @@ if menu_selection == "📅 Presupuesto Mensual":
     var_des = data_m["gastos_var"][data_m["gastos_var"]["Tipo"] == "Deseos"]["Monto"].sum() if not data_m["gastos_var"].empty else 0.0
     des_total = fac_des + var_des
     
-    st.markdown(f"""
+    st.markdown(f'''
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — {sel_month.upper()} {sel_year}</div>
       <div class='main-header-subtitle'>Gestión y Ejecución Presupuestaria en Tiempo Real</div>
     </div>
-    """, unsafe_allow_html=True)
+    ''', unsafe_allow_html=True)
     
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.markdown(f"""
+        st.markdown(f'''
         <div class='kpi-card'>
           <div class='kpi-card-label'>Ingreso Total Recibido</div>
           <div class='kpi-card-value'>${total_ingreso_act:,.2f}</div>
         </div>
-        """, unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
     with c2:
-        st.markdown(f"""
+        st.markdown(f'''
         <div class='kpi-card'>
           <div class='kpi-card-label'>Total Gastado (Fijo + Var)</div>
           <div class='kpi-card-value'>${total_gastado:,.2f}</div>
         </div>
-        """, unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
     with c3:
-        st.markdown(f"""
+        st.markdown(f'''
         <div class='kpi-card'>
           <div class='kpi-card-label'>Total Ahorrado / Invertido</div>
           <div class='kpi-card-value'>${total_ahorro:,.2f}</div>
         </div>
-        """, unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
     with c4:
-        st.markdown(f"""
+        st.markdown(f'''
         <div class='restante-card'>
           <div class='restante-card-label'>Dinero Restante Disponible</div>
           <div class='restante-card-value'>${dinero_restante:,.2f}</div>
         </div>
-        """, unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
         
     st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
     
+    # Gráficos con corrección de títulos
     g_col1, g_col2 = st.columns(2)
     with g_col1:
         df_pie = pd.DataFrame({
@@ -526,20 +525,18 @@ if menu_selection == "📅 Presupuesto Mensual":
         })
         if df_pie["Monto"].sum() == 0:
             fig_pie = px.pie(df_pie, names="Categoría", values=[1, 1, 1], hole=0.55,
-                             title="Distribución 50/30/20 (Sin registros aún)",
                              color_discrete_sequence=["#E2E8F0", "#CBD5E1", "#94A3B8"])
         else:
             fig_pie = px.pie(df_pie, names="Categoría", values="Monto", hole=0.55,
-                             title="Distribución 50/30/20 del Mes",
                              color_discrete_sequence=["#00385C", "#31B4D1", "#00ACA9"])
         fig_pie.update_layout(
             template="plotly_white",
+            title=dict(text="Distribución 50/30/20 del Mes", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
             margin=dict(t=40, b=10, l=10, r=10),
             height=250,
             paper_bgcolor="#FFFFFF",
             plot_bgcolor="#FFFFFF",
             font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
-            title=dict(font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
             legend=dict(font=dict(color="#1E293B"))
         )
         st.plotly_chart(fig_pie, use_container_width=True)
@@ -553,13 +550,12 @@ if menu_selection == "📅 Presupuesto Mensual":
         fig_bar.update_layout(
             template="plotly_white",
             barmode='group',
-            title="Comparativa Flujo de Caja",
+            title=dict(text="Comparativa Flujo de Caja", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
             margin=dict(t=40, b=10, l=10, r=10),
             height=250,
             paper_bgcolor="#FFFFFF",
             plot_bgcolor="#FFFFFF",
             font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
-            title=dict(font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
             legend=dict(font=dict(color="#1E293B")),
             xaxis=dict(tickfont=dict(color="#00385C")),
             yaxis=dict(tickfont=dict(color="#00385C"))
@@ -577,7 +573,7 @@ if menu_selection == "📅 Presupuesto Mensual":
     # COLUMNA IZQUIERDA: INGRESOS Y FACTURAS
     # ------------------------------------------
     with col_izq:
-        # 1. INGRESOS (Solo Actual, sin Presupuesto)
+        # 1. INGRESOS (Solo Actual)
         st.markdown("<div class='section-badge'>💵 1. INGRESOS (VALOR RECIBIDO)</div>", unsafe_allow_html=True)
         st.caption("Editable directamente en la tabla.")
         data_m["ingresos"] = st.data_editor(
@@ -812,12 +808,12 @@ if menu_selection == "📅 Presupuesto Mensual":
 # 7. VISTA: RESUMEN ANUAL CONSOLIDADO (SOLO MESES CREADOS)
 # ==========================================
 elif menu_selection == "📊 Resumen Anual":
-    st.markdown(f"""
+    st.markdown(f'''
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — CONSOLIDADO ANUAL {sel_year}</div>
       <div class='main-header-subtitle'>Rendimiento y Ejecución Financiera Mensualizada ({len(months_in_active_year)} meses registrados)</div>
     </div>
-    """, unsafe_allow_html=True)
+    ''', unsafe_allow_html=True)
     
     summary_data = []
     for m in months_in_active_year:
@@ -847,33 +843,33 @@ elif menu_selection == "📊 Resumen Anual":
     
     ca1, ca2, ca3, ca4 = st.columns(4)
     with ca1:
-        st.markdown(f"""
+        st.markdown(f'''
         <div class='kpi-card'>
           <div class='kpi-card-label'>Ingresos Totales {sel_year}</div>
           <div class='kpi-card-value'>${tot_ing:,.2f}</div>
         </div>
-        """, unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
     with ca2:
-        st.markdown(f"""
+        st.markdown(f'''
         <div class='kpi-card'>
           <div class='kpi-card-label'>Gastos Totales {sel_year}</div>
           <div class='kpi-card-value'>${tot_gas:,.2f}</div>
         </div>
-        """, unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
     with ca3:
-        st.markdown(f"""
+        st.markdown(f'''
         <div class='kpi-card'>
           <div class='kpi-card-label'>Ahorro Acumulado {sel_year}</div>
           <div class='kpi-card-value'>${tot_aho:,.2f}</div>
         </div>
-        """, unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
     with ca4:
-        st.markdown(f"""
+        st.markdown(f'''
         <div class='restante-card'>
           <div class='restante-card-label'>Superávit Neto Anual</div>
           <div class='restante-card-value'>${tot_flu:,.2f}</div>
         </div>
-        """, unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
         
     st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
     
@@ -884,13 +880,12 @@ elif menu_selection == "📊 Resumen Anual":
         fig_an.add_trace(go.Bar(x=df_annual["Mes"], y=df_annual["Ahorros"], name="Ahorros", marker_color="#00385C"))
         fig_an.update_layout(
             template="plotly_white",
-            title=f"Comportamiento Mes a Mes ({sel_year})",
+            title=dict(text=f"Comportamiento Mes a Mes ({sel_year})", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
             barmode='group',
             height=340,
             paper_bgcolor="#FFFFFF",
             plot_bgcolor="#FFFFFF",
             font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
-            title_font=dict(color="#00385C", size=14),
             legend=dict(font=dict(color="#1E293B")),
             xaxis=dict(tickfont=dict(color="#00385C")),
             yaxis=dict(tickfont=dict(color="#00385C"))
@@ -906,12 +901,12 @@ elif menu_selection == "📊 Resumen Anual":
 # 8. VISTA: HORIZONTES FINANCIEROS (3, 5, 10+ AÑOS)
 # ==========================================
 elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
-    st.markdown("""
+    st.markdown('''
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — PLANIFICACIÓN PLURIANUAL</div>
       <div class='main-header-subtitle'>Proyección Estratégica: Corto Plazo (3 años), Mediano Plazo (5 años) y Largo Plazo (10+ años)</div>
     </div>
-    """, unsafe_allow_html=True)
+    ''', unsafe_allow_html=True)
     
     tab_cp, tab_mp, tab_lp = st.tabs([
         "⚡ Corto Plazo (3 Años)",
@@ -961,13 +956,13 @@ elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
             st.metric("Capital Acumulado al Año 3", f"${df_cp['Patrimonio Total Estimado'].iloc[-1]:,.2f}")
             
         fig_cp = px.bar(df_cp, x="Periodo", y=["Aporte Acumulado", "Rendimientos / Interés Compuesto"],
-                        title="Evolución Patrimonial - Corto Plazo", color_discrete_sequence=["#00385C", "#00ACA9"])
+                        color_discrete_sequence=["#00385C", "#00ACA9"])
         fig_cp.update_layout(
             template="plotly_white",
+            title=dict(text="Evolución Patrimonial - Corto Plazo", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
             paper_bgcolor="#FFFFFF",
             plot_bgcolor="#FFFFFF",
             font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
-            title_font=dict(color="#00385C", size=14),
             legend=dict(font=dict(color="#1E293B"))
         )
         st.plotly_chart(fig_cp, use_container_width=True)
@@ -986,13 +981,13 @@ elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
         with c_mp3:
             st.metric("Capital Acumulado al Año 5", f"${df_mp['Patrimonio Total Estimado'].iloc[-1]:,.2f}")
             
-        fig_mp = px.area(df_mp, x="Periodo", y="Patrimonio Total Estimado", title="Curva de Crecimiento a 5 Años", color_discrete_sequence=["#00ACA9"])
+        fig_mp = px.area(df_mp, x="Periodo", y="Patrimonio Total Estimado", color_discrete_sequence=["#00ACA9"])
         fig_mp.update_layout(
             template="plotly_white",
+            title=dict(text="Curva de Crecimiento a 5 Años", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
             paper_bgcolor="#FFFFFF",
             plot_bgcolor="#FFFFFF",
-            font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
-            title_font=dict(color="#00385C", size=14)
+            font=dict(color="#00385C", family="Nunito Sans, sans-serif")
         )
         st.plotly_chart(fig_mp, use_container_width=True)
         st.dataframe(df_mp.style.format({"Aporte Acumulado": "${:,.2f}", "Rendimientos / Interés Compuesto": "${:,.2f}", "Patrimonio Total Estimado": "${:,.2f}"}), use_container_width=True)
@@ -1017,12 +1012,11 @@ elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
         fig_lp.add_trace(go.Scatter(x=df_lp["Año"], y=df_lp["Patrimonio Total Estimado"], name="Patrimonio Total con Interés Compuesto", fill='tonexty', line=dict(color='#00ACA9')))
         fig_lp.update_layout(
             template="plotly_white",
-            title="Efecto Bola de Nieve a Largo Plazo",
+            title=dict(text="Efecto Bola de Nieve a Largo Plazo", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
             height=380,
             paper_bgcolor="#FFFFFF",
             plot_bgcolor="#FFFFFF",
             font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
-            title_font=dict(color="#00385C", size=14),
             legend=dict(font=dict(color="#1E293B"))
         )
         st.plotly_chart(fig_lp, use_container_width=True)
@@ -1032,12 +1026,12 @@ elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
 # 9. PANEL DE ADMINISTRACIÓN Y SUPERUSUARIO
 # ==========================================
 elif menu_selection == "👑 Panel de Administración" and is_admin:
-    st.markdown("""
+    st.markdown('''
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — CENTRO DE CONTROL SUPERUSUARIO</div>
       <div class='main-header-subtitle'>Gestión Total de Usuarios, Roles, Creación, Edición y Auditoría Forense</div>
     </div>
-    """, unsafe_allow_html=True)
+    ''', unsafe_allow_html=True)
     
     t_list, t_create, t_edit, t_audit = st.tabs([
         "👥 Listado de Usuarios",
