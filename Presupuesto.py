@@ -22,76 +22,130 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Inicializar tema de la app en session_state si no existe
+if "app_theme" not in st.session_state:
+    st.session_state.app_theme = "System"
+
 # ==========================================
-# 2. ESTILOS CSS - SIDEBAR COLOR #29AFE2 CON LETRAS BLANCAS
+# 2. ESTILOS CSS ADAPTABLES (SYSTEM, LIGHT, DARK)
 # ==========================================
-st.markdown("""
+if st.session_state.app_theme == "Dark":
+    theme_css = """
+    :root {
+      color-scheme: dark !important;
+      --card-bg: #1E293B;
+      --card-border: #334155;
+      --main-text: #F8FAFC;
+      --sub-text: #94A3B8;
+      --kpi-title: #38BDF8;
+      --banner-bg: linear-gradient(135deg, #0F172A, #1E3A8A);
+      --badge-bg: #1E3A5F;
+      --badge-border: #38BDF8;
+      --badge-text: #E0F2FE;
+      --restante-bg: #0F2922;
+      --restante-border: #00ACA9;
+      --restante-text: #2DD4BF;
+    }
+    html, body, .stApp, [data-testid="stAppViewContainer"], .main {
+      background-color: #0F172A !important;
+      color: #F8FAFC !important;
+    }
+    p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
+      color: #F8FAFC !important;
+    }
+    """
+    chart_template = "plotly_dark"
+    chart_bg = "#1E293B"
+    chart_text = "#F8FAFC"
+elif st.session_state.app_theme == "Light":
+    theme_css = """
+    :root {
+      color-scheme: light !important;
+      --card-bg: #FFFFFF;
+      --card-border: #E2E8F0;
+      --main-text: #1E293B;
+      --sub-text: #64748B;
+      --kpi-title: #00385C;
+      --banner-bg: linear-gradient(135deg, #00385C, #0F4F7F);
+      --badge-bg: #E5F6FF;
+      --badge-border: #00385C;
+      --badge-text: #00385C;
+      --restante-bg: #F0FDF4;
+      --restante-border: #00ACA9;
+      --restante-text: #00ACA9;
+    }
+    html, body, .stApp, [data-testid="stAppViewContainer"], .main {
+      background-color: #FFFFFF !important;
+      color: #1E293B !important;
+    }
+    p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
+      color: #1E293B !important;
+    }
+    """
+    chart_template = "plotly_white"
+    chart_bg = "#FFFFFF"
+    chart_text = "#00385C"
+else:
+    theme_css = """
+    :root {
+      --card-bg: var(--background-color, #FFFFFF);
+      --card-border: rgba(148, 163, 184, 0.3);
+      --main-text: var(--text-color, #1E293B);
+      --sub-text: #64748B;
+      --kpi-title: #00ACA9;
+      --banner-bg: linear-gradient(135deg, #00385C, #0F4F7F);
+      --badge-bg: rgba(0, 56, 92, 0.1);
+      --badge-border: #00385C;
+      --badge-text: var(--text-color, #00385C);
+      --restante-bg: rgba(0, 172, 169, 0.08);
+      --restante-border: #00ACA9;
+      --restante-text: #00ACA9;
+    }
+    """
+    chart_template = "none"
+    chart_bg = "rgba(0,0,0,0)"
+    chart_text = "#00ACA9"
+
+st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&display=swap');
 
-:root {
-  color-scheme: light !important;
-  --font-family-base: 'Nunito Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --color-primary: #00385C;
-  --color-primary-soft: #E5F6FF;
-  --color-primary-pale: #F5FBFF;
-  --color-primary-deep: #0F4F7F;
+{theme_css}
 
-  --color-secondary: #A0DFF7;
-  --color-secondary-soft: #E7F6FD;
-  --color-secondary-deep: #18688D;
-
-  --color-accent: #00ACA9;
-  --color-accent-soft: #E5FFFE;
-  --color-accent-deep: #186664;
-
-  --color-neutral-text: #1E293B;
-  --color-border-subtle: #CBD5E1;
-}
-
-/* BLANCO TOTAL EN EL CUERPO DE LA PÁGINA */
-html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {
-  font-family: var(--font-family-base) !important;
-  background-color: #FFFFFF !important;
-  color: #1E293B !important;
-}
-
-p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
-  color: #1E293B !important;
-}
+html, body, .stApp {{
+  font-family: 'Nunito Sans', sans-serif !important;
+}}
 
 /* SIDEBAR ESTILO SAP BYDESIGN COLOR #29AFE2 CON LETRAS BLANCAS */
-[data-testid="stSidebar"], [data-testid="stSidebarContent"] {
+[data-testid="stSidebar"], [data-testid="stSidebarContent"] {{
   background-color: #29afe2 !important;
   border-right: 1.5px solid #1e98c7 !important;
-}
+}}
 
-[data-testid="stSidebar"] * {
+[data-testid="stSidebar"] * {{
   color: #FFFFFF !important;
-}
+}}
 
 [data-testid="stSidebar"] .stSelectbox label, 
 [data-testid="stSidebar"] .stNumberInput label,
 [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
 [data-testid="stSidebar"] span,
-[data-testid="stSidebar"] label {
+[data-testid="stSidebar"] label {{
   color: #FFFFFF !important;
-}
+}}
 
-/* Inputs y selectores dentro del sidebar para mantener legibilidad */
 [data-testid="stSidebar"] div[data-baseweb="select"] > div,
-[data-testid="stSidebar"] input {
+[data-testid="stSidebar"] input {{
   background-color: #FFFFFF !important;
   color: #1E293B !important;
   border-color: #FFFFFF !important;
-}
+}}
 
-[data-testid="stSidebar"] div[data-baseweb="select"] * {
+[data-testid="stSidebar"] div[data-baseweb="select"] * {{
   color: #1E293B !important;
-}
+}}
 
-/* Encabezados y títulos de centros de trabajo */
-.sap-work-center-header {
+.sap-work-center-header {{
   font-size: 0.74rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -100,10 +154,9 @@ p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
   padding: 8px 4px 4px 4px;
   margin-top: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-}
+}}
 
-/* Botones de navegación en Sidebar */
-[data-testid="stSidebar"] div.stButton > button {
+[data-testid="stSidebar"] div.stButton > button {{
   background-color: rgba(255, 255, 255, 0.18) !important;
   color: #FFFFFF !important;
   border: 1px solid rgba(255, 255, 255, 0.3) !important;
@@ -114,130 +167,137 @@ p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
   font-size: 0.88rem !important;
   border-radius: 6px !important;
   transition: all 0.2s ease-in-out !important;
-}
+}}
 
-[data-testid="stSidebar"] div.stButton > button:hover {
+[data-testid="stSidebar"] div.stButton > button:hover {{
   background-color: #FFFFFF !important;
   color: #00385C !important;
   border-left: 5px solid #00385C !important;
-}
+}}
 
-[data-testid="stSidebar"] div.stButton > button:hover * {
+[data-testid="stSidebar"] div.stButton > button:hover * {{
   color: #00385C !important;
-}
+}}
 
-/* Tarjeta de usuario en el sidebar */
-.sap-user-card {
+.sap-user-card {{
   background-color: rgba(0, 56, 92, 0.25) !important;
   border: 1.5px solid rgba(255, 255, 255, 0.45) !important;
   border-radius: 8px;
   padding: 10px 12px;
   margin-bottom: 14px;
-}
+}}
 
 /* BANNER DE CABECERA CON TÍTULOS TOTALMENTE CENTRADOS */
-.main-header-banner {
-  background: linear-gradient(135deg, #00385C, #0F4F7F) !important;
+.main-header-banner {{
+  background: var(--banner-bg) !important;
   color: #FFFFFF !important;
   padding: 1.4rem 2rem;
   border-radius: 12px;
-  margin-bottom: 1.4rem;
+  margin-bottom: 1.2rem;
   text-align: center !important;
-  box-shadow: 0 4px 14px rgba(0, 56, 92, 0.1);
-}
+  box-shadow: 0 4px 14px rgba(0, 56, 92, 0.12);
+}}
 
-.main-header-title {
+.main-header-title {{
   font-size: 1.85rem;
   font-weight: 800;
   margin: 0 auto !important;
   text-align: center !important;
   color: #FFFFFF !important;
-}
+}}
 
-.main-header-subtitle {
+.main-header-subtitle {{
   font-size: 0.96rem;
   color: #E2E8F0 !important;
   margin-top: 6px;
   text-align: center !important;
-}
+}}
 
 /* Tarjetas KPI y Dinero Restante */
-.kpi-card {
-  background: #FFFFFF !important;
-  border: 1.5px solid #E2E8F0 !important;
+.kpi-card {{
+  background: var(--card-bg) !important;
+  border: 1.5px solid var(--card-border) !important;
   border-radius: 10px;
   padding: 1rem 0.8rem;
   text-align: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-}
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}}
 
-.kpi-card-label {
+.kpi-card-label {{
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: #18688D !important;
+  color: var(--sub-text) !important;
   letter-spacing: 0.5px;
-}
+}}
 
-.kpi-card-value {
+.kpi-card-value {{
   font-size: 1.55rem;
   font-weight: 800;
-  color: #00385C !important;
+  color: var(--kpi-title) !important;
   margin-top: 0.25rem;
-}
+}}
 
-.restante-card {
-  background: #FFFFFF !important;
-  border: 2px solid #00ACA9 !important;
+.restante-card {{
+  background: var(--restante-bg) !important;
+  border: 2px solid var(--restante-border) !important;
   border-radius: 10px;
   padding: 1rem 0.8rem;
   text-align: center;
   box-shadow: 0 2px 6px rgba(0, 172, 169, 0.1);
-}
+}}
 
-.restante-card-label {
+.restante-card-label {{
   font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;
-  color: #186664 !important;
+  color: var(--restante-text) !important;
   letter-spacing: 0.5px;
-}
+}}
 
-.restante-card-value {
+.restante-card-value {{
   font-size: 1.6rem;
   font-weight: 800;
-  color: #00ACA9 !important;
+  color: var(--restante-text) !important;
   margin-top: 0.25rem;
-}
+}}
 
-.section-badge {
-  background-color: #E5F6FF !important;
-  color: #00385C !important;
+.section-badge {{
+  background-color: var(--badge-bg) !important;
+  color: var(--badge-text) !important;
   font-weight: 800;
   font-size: 0.85rem;
   padding: 6px 12px;
   border-radius: 6px;
   display: inline-block;
   margin-bottom: 0.6rem;
-  border-left: 4px solid #00385C !important;
-}
+  border-left: 4px solid var(--badge-border) !important;
+}}
 
-/* DataFrames y DataEditors claros */
-[data-testid="stDataFrame"], [data-testid="stDataEditor"], div[data-testid="stDataEditor"] > div {
-  background-color: #FFFFFF !important;
+/* CAMPANA DE NOTIFICACIONES */
+.bell-badge {{
+  background-color: #D74546;
+  color: white !important;
+  font-weight: 800;
+  border-radius: 50%;
+  padding: 2px 7px;
+  font-size: 0.75rem;
+  margin-left: 4px;
+}}
+
+.notif-box {{
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  padding: 10px 14px;
   border-radius: 8px;
-}
-
-div[data-baseweb="select"] > div, input {
-  background-color: #FFFFFF !important;
-  color: #1E293B !important;
-  border-color: #CBD5E1 !important;
-}
+  margin-bottom: 8px;
+  border-left: 4px solid #00ACA9;
+}}
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. SEGURIDAD Y GESTIÓN DE SESIONES
+# 3. SEGURIDAD, ESTADO Y USUARIOS
 # ==========================================
 def hash_password(password: str, salt: str = None) -> tuple:
     if salt is None:
@@ -295,13 +355,9 @@ def clone_structure_from_month(source_month_data):
         "seguimiento": new_seg
     }
 
-DATA_VERSION = "v7_sap_bydesign_ui"
+DATA_VERSION = "v9_full_workflow_all_users"
 
 def init_system_state():
-    if "data_schema_version" not in st.session_state or st.session_state.data_schema_version != DATA_VERSION:
-        st.session_state.data_schema_version = DATA_VERSION
-        st.session_state.finances = {}
-        
     if "users" not in st.session_state:
         admin_hash, admin_salt = hash_password("admin123")
         user_hash, user_salt = hash_password("123456")
@@ -311,16 +367,20 @@ def init_system_state():
                 "role": "Superusuario",
                 "hash": admin_hash,
                 "salt": admin_salt,
+                "is_active": True,
                 "failed_attempts": 0,
-                "locked_until": None
+                "locked_until": None,
+                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M")
             },
             "usuario@demo.com": {
                 "name": "Usuario Demo",
                 "role": "Usuario",
                 "hash": user_hash,
                 "salt": user_salt,
+                "is_active": True,
                 "failed_attempts": 0,
-                "locked_until": None
+                "locked_until": None,
+                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M")
             }
         }
     if "finances" not in st.session_state:
@@ -335,7 +395,7 @@ def init_system_state():
         st.session_state.smtp_config = {
             "server": "smtp.gmail.com",
             "port": 587,
-            "sender": "alertas.seguridad@midominio.com",
+            "sender": "",
             "password": "",
             "recipient": "admin@optibudget.com",
             "active": False
@@ -344,9 +404,10 @@ def init_system_state():
 init_system_state()
 
 def init_user_finances(email):
+    current_year = datetime.now().year
     if email not in st.session_state.finances:
         st.session_state.finances[email] = {
-            2026: {
+            current_year: {
                 "Enero": create_initial_example_month()
             }
         }
@@ -356,8 +417,43 @@ def send_security_alert(target_email, event_type, details):
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "target_email": target_email,
         "event_type": event_type,
-        "details": details
+        "details": details,
+        "correo_enviado": "No configurado"
     }
+    
+    cfg = st.session_state.smtp_config
+    if cfg["active"] and cfg["sender"] and cfg["password"] and cfg["recipient"]:
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = f"🚨 [NOTIFICACIÓN] {event_type} - OptiBudget Pro"
+            msg["From"] = cfg["sender"]
+            msg["To"] = cfg["recipient"]
+            
+            html = f"""
+            <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #CBD5E1; border-radius: 8px;">
+              <h2 style="color: #00385C; margin-top: 0;">💼 OptiBudget Pro - Notificación del Sistema</h2>
+              <p>Se ha registrado el siguiente evento en la plataforma:</p>
+              <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                <tr style="background: #F8FAFC;"><td style="padding: 8px; font-weight: bold;">Evento:</td><td style="padding: 8px; color: #00ACA9;">{event_type}</td></tr>
+                <tr><td style="padding: 8px; font-weight: bold;">Fecha y Hora:</td><td style="padding: 8px;">{log_entry['timestamp']}</td></tr>
+                <tr style="background: #F8FAFC;"><td style="padding: 8px; font-weight: bold;">Cuenta Relacionada:</td><td style="padding: 8px;">{target_email}</td></tr>
+                <tr><td style="padding: 8px; font-weight: bold;">Detalles:</td><td style="padding: 8px;">{details}</td></tr>
+              </table>
+              <hr style="border: 0; border-top: 1px solid #CBD5E1;">
+              <p style="font-size: 0.85rem; color: #64748B;">Notificación enviada a la dirección administrativa configurada.</p>
+            </div>
+            """
+            msg.attach(MIMEText(html, "html"))
+            
+            server = smtplib.SMTP(cfg["server"], cfg["port"], timeout=6)
+            server.starttls()
+            server.login(cfg["sender"], cfg["password"])
+            server.sendmail(cfg["sender"], cfg["recipient"], msg.as_string())
+            server.quit()
+            log_entry["correo_enviado"] = f"Enviado a {cfg['recipient']}"
+        except Exception as e:
+            log_entry["correo_enviado"] = f"Error: {str(e)}"
+            
     st.session_state.audit_log.append(log_entry)
 
 # ==========================================
@@ -384,7 +480,11 @@ if st.session_state.current_user is None:
                 if btn_login:
                     if login_email in st.session_state.users:
                         u_data = st.session_state.users[login_email]
-                        if u_data["locked_until"] and datetime.now() < u_data["locked_until"]:
+                        
+                        # 1. VALIDACIÓN: USUARIO ACTIVO/APROBADO POR EL ADMIN
+                        if not u_data.get("is_active", True):
+                            st.warning("⏳ Tu cuenta ha sido registrada pero está pendiente de aprobación por el Administrador. No puedes ingresar hasta que sea validada.")
+                        elif u_data["locked_until"] and datetime.now() < u_data["locked_until"]:
                             st.error(f"⛔ Cuenta bloqueada por seguridad hasta {u_data['locked_until'].strftime('%H:%M:%S')}.")
                         else:
                             if verify_password(u_data["hash"], u_data["salt"], login_pass):
@@ -398,9 +498,10 @@ if st.session_state.current_user is None:
                                 u_data["failed_attempts"] += 1
                                 if u_data["failed_attempts"] >= 3:
                                     u_data["locked_until"] = datetime.now() + timedelta(minutes=15)
-                                    send_security_alert(login_email, "INTROMISIÓN DETECTADA", "3 intentos fallidos consecutivos.")
+                                    send_security_alert(login_email, "INTROMISIÓN DETECTADA / BLOQUEO", "3 intentos fallidos consecutivos.")
                                     st.error("⛔ Demasiados intentos fallidos. Cuenta bloqueada por 15 minutos.")
                                 else:
+                                    send_security_alert(login_email, "INTENTO FALLIDO", f"Intento #{u_data['failed_attempts']}")
                                     st.warning(f"Credenciales incorrectas. Intentos restantes: {3 - u_data['failed_attempts']}.")
                     else:
                         st.error("Credenciales inválidas.")
@@ -427,15 +528,23 @@ if st.session_state.current_user is None:
                             "role": "Usuario",
                             "hash": phash,
                             "salt": psalt,
+                            "is_active": False,
                             "failed_attempts": 0,
-                            "locked_until": None
+                            "locked_until": None,
+                            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M")
                         }
                         init_user_finances(reg_email)
-                        st.success("Cuenta creada exitosamente. Ya puedes iniciar sesión.")
+                        
+                        send_security_alert(
+                            reg_email, 
+                            "NUEVO USUARIO PENDIENTE DE APROBACIÓN", 
+                            f"El usuario {reg_name} ({reg_email}) se ha registrado. Requiere activación en el panel de administración."
+                        )
+                        st.success("✅ Cuenta registrada exitosamente. Se ha enviado un correo al Administrador. Podrás ingresar tan pronto active tu cuenta.")
     st.stop()
 
 # ==========================================
-# 5. MENÚ LATERAL ESTILO SAP BYDESIGN
+# 5. MENÚ LATERAL ESTILO SAP BYDESIGN Y NOTIFICACIONES
 # ==========================================
 current_email = st.session_state.current_user
 user_info = st.session_state.users[current_email]
@@ -444,10 +553,25 @@ is_admin = user_info["role"] == "Superusuario"
 init_user_finances(current_email)
 user_fin = st.session_state.finances[current_email]
 
+# CÁLCULO DE TAREAS Y MENSAJES PENDIENTES PARA LA CAMPANA 🔔
+notifications = []
+now = datetime.now()
+current_sys_year = now.year
+current_sys_month = CHRONO_MONTHS[now.month - 1]
+
+if is_admin:
+    pending_users = [mail for mail, u in st.session_state.users.items() if not u.get("is_active", False)]
+    if pending_users:
+        notifications.append(f"👥 Hay **{len(pending_users)}** usuario(s) pendiente(s) de aprobación para ingresar.")
+
+if current_sys_year not in user_fin:
+    notifications.append(f"📅 Estamos en el año **{current_sys_year}** y aún no has creado este año fiscal.")
+elif current_sys_month not in user_fin[current_sys_year]:
+    notifications.append(f"🗓️ Ha comenzado **{current_sys_month} {current_sys_year}** y aún no has creado este mes.")
+
 with st.sidebar:
-    # Encabezado ByDesign
     st.markdown("""
-    <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 4px;'>
+    <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px;'>
       <div style='font-size: 1.35rem;'>💼</div>
       <div>
         <div style='font-size: 1.15rem; font-weight: 800; color: #FFFFFF !important; line-height: 1.1;'>OptiBudget Pro</div>
@@ -455,6 +579,25 @@ with st.sidebar:
       </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # SELECTOR DE TEMA: System, Light, Dark (SIN FORZAR FONDO)
+    theme_choice = st.selectbox(
+        "🎨 Tema Visual",
+        ["System", "Light", "Dark"],
+        index=["System", "Light", "Dark"].index(st.session_state.app_theme)
+    )
+    if theme_choice != st.session_state.app_theme:
+        st.session_state.app_theme = theme_choice
+        st.rerun()
+
+    # CAMPANA DE NOTIFICACIONES (🔔)
+    notif_count = len(notifications)
+    with st.expander(f"🔔 Notificaciones y Tareas {f'({notif_count})' if notif_count > 0 else ''}"):
+        if notifications:
+            for n in notifications:
+                st.markdown(f"<div class='notif-box'>⚠️ {n}</div>", unsafe_allow_html=True)
+        else:
+            st.success("✅ No tienes tareas pendientes. ¡Todo al día!")
 
     # Tarjeta de Usuario Activo
     st.markdown(f"""
@@ -475,16 +618,18 @@ with st.sidebar:
         ("📈 Horizontes Financieros", "Proyección 3, 5, 10+ Años")
     ]
     if is_admin:
-        module_list.append(("👑 Panel de Administración", "Control Superusuario"))
+        admin_notif_tag = f" ({len(pending_users)})" if (is_admin and pending_users) else ""
+        module_list.append((f"👑 Panel de Administración{admin_notif_tag}", "Control Superusuario"))
 
-    for mod_name, mod_desc in module_list:
-        is_active = (st.session_state.active_module == mod_name)
+    for mod_tuple in module_list:
+        mod_name = mod_tuple[0]
+        is_active = (st.session_state.active_module.split(" (")[0] == mod_name.split(" (")[0])
         prefix = "▶ " if is_active else "  "
         if st.button(f"{prefix}{mod_name}", key=f"nav_btn_{mod_name}", use_container_width=True):
             st.session_state.active_module = mod_name
             st.rerun()
 
-    menu_selection = st.session_state.active_module
+    menu_selection = st.session_state.active_module.split(" (")[0]
 
     st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
@@ -500,7 +645,7 @@ with st.sidebar:
 
     with st.expander("➕ Crear Nuevo Año"):
         with st.form("form_create_year"):
-            next_suggested_year = max(created_years) + 1 if created_years else 2026
+            next_suggested_year = max(created_years) + 1 if created_years else current_sys_year
             new_year_input = st.number_input("Año a crear", min_value=2020, max_value=2099, value=next_suggested_year, step=1)
             btn_create_year = st.form_submit_button("Crear Año", use_container_width=True)
             
@@ -530,7 +675,7 @@ with st.sidebar:
     if uncreated_months:
         with st.expander("➕ Crear Nuevo Mes"):
             with st.form("form_create_month"):
-                st.caption("Copia la lista de conceptos del mes previo o a seleccionar")
+                st.caption("Copia la lista de conceptos del mes previo con los valores en 0.0.")
                 next_month_to_create = st.selectbox("Mes a crear", uncreated_months, index=0)
                 clone_from = st.selectbox("Traer campos de:", months_in_active_year, index=len(months_in_active_year)-1)
                 btn_create_month = st.form_submit_button("Crear Mes", use_container_width=True)
@@ -550,7 +695,7 @@ with st.sidebar:
         st.rerun()
 
 # ==========================================
-# 6. VISTA: PRESUPUESTO MENSUAL
+# 6. VISTA: PRESUPUESTO MENSUAL (REACTIVO EN TIEMPO REAL)
 # ==========================================
 if menu_selection == "📅 Presupuesto Mensual":
     data_m = user_fin[sel_year][sel_month]
@@ -558,6 +703,7 @@ if menu_selection == "📅 Presupuesto Mensual":
     if "Presupuesto" in data_m["ingresos"].columns:
         data_m["ingresos"] = data_m["ingresos"].drop(columns=["Presupuesto"])
     
+    # RECALCULO REACTIVO TOTAL
     total_ingreso_act = float(data_m["ingresos"]["Actual"].sum()) if not data_m["ingresos"].empty else 0.0
     total_facturas = float(data_m["facturas"]["Monto"].sum()) if not data_m["facturas"].empty else 0.0
     total_var = float(data_m["gastos_var"]["Monto"].sum()) if not data_m["gastos_var"].empty else 0.0
@@ -575,7 +721,7 @@ if menu_selection == "📅 Presupuesto Mensual":
     var_des = data_m["gastos_var"][data_m["gastos_var"]["Tipo"] == "Deseos"]["Monto"].sum() if not data_m["gastos_var"].empty else 0.0
     des_total = fac_des + var_des
     
-    # BANNER CON TÍTULO CENTRADO
+    # TÍTULO DE PÁGINA TOTALMENTE CENTRADO
     st.markdown(f"""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — {sel_month.upper()} {sel_year}</div>
@@ -583,6 +729,7 @@ if menu_selection == "📅 Presupuesto Mensual":
     </div>
     """, unsafe_allow_html=True)
     
+    # TARJETAS DE VALORES KPI
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.markdown(f"""
@@ -615,7 +762,7 @@ if menu_selection == "📅 Presupuesto Mensual":
         
     st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
     
-    # Gráficos con títulos centrados
+    # GRÁFICOS REACTIVOS (TÍTULOS CENTRADOS Y TEMPLATE ADAPTABLE)
     g_col1, g_col2 = st.columns(2)
     with g_col1:
         df_pie = pd.DataFrame({
@@ -624,19 +771,17 @@ if menu_selection == "📅 Presupuesto Mensual":
         })
         if df_pie["Monto"].sum() == 0:
             fig_pie = px.pie(df_pie, names="Categoría", values=[1, 1, 1], hole=0.55,
-                             color_discrete_sequence=["#E2E8F0", "#CBD5E1", "#94A3B8"])
+                             color_discrete_sequence=["#94A3B8", "#CBD5E1", "#E2E8F0"])
         else:
             fig_pie = px.pie(df_pie, names="Categoría", values="Monto", hole=0.55,
                              color_discrete_sequence=["#00385C", "#31B4D1", "#00ACA9"])
         fig_pie.update_layout(
-            template="plotly_white",
-            title=dict(text="Distribución 50/30/20 del Mes", x=0.5, xanchor="center", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
+            template=chart_template,
+            title=dict(text="Distribución 50/30/20 del Mes", x=0.5, xanchor="center", font=dict(color=chart_text, size=14)),
             margin=dict(t=40, b=10, l=10, r=10),
             height=250,
-            paper_bgcolor="#FFFFFF",
-            plot_bgcolor="#FFFFFF",
-            font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
-            legend=dict(font=dict(color="#1E293B"))
+            paper_bgcolor=chart_bg,
+            plot_bgcolor=chart_bg
         )
         st.plotly_chart(fig_pie, use_container_width=True)
         
@@ -647,17 +792,13 @@ if menu_selection == "📅 Presupuesto Mensual":
             go.Bar(name='Ahorros', x=['Mes'], y=[total_ahorro], marker_color='#00385C')
         ])
         fig_bar.update_layout(
-            template="plotly_white",
+            template=chart_template,
             barmode='group',
-            title=dict(text="Comparativa Flujo de Caja", x=0.5, xanchor="center", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
+            title=dict(text="Comparativa Flujo de Caja", x=0.5, xanchor="center", font=dict(color=chart_text, size=14)),
             margin=dict(t=40, b=10, l=10, r=10),
             height=250,
-            paper_bgcolor="#FFFFFF",
-            plot_bgcolor="#FFFFFF",
-            font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
-            legend=dict(font=dict(color="#1E293B")),
-            xaxis=dict(tickfont=dict(color="#00385C")),
-            yaxis=dict(tickfont=dict(color="#00385C"))
+            paper_bgcolor=chart_bg,
+            plot_bgcolor=chart_bg
         )
         st.plotly_chart(fig_bar, use_container_width=True)
 
@@ -671,8 +812,8 @@ if menu_selection == "📅 Presupuesto Mensual":
     with col_izq:
         # 1. INGRESOS (Solo Actual)
         st.markdown("<div class='section-badge'>💵 1. INGRESOS (VALOR RECIBIDO)</div>", unsafe_allow_html=True)
-        st.caption("Editable directamente en la tabla.")
-        data_m["ingresos"] = st.data_editor(
+        st.caption("Editable directamente en la tabla. Se recalcula en tiempo real.")
+        edited_ing = st.data_editor(
             data_m["ingresos"],
             column_config={
                 "Check": st.column_config.CheckboxColumn("✓", default=False),
@@ -683,6 +824,9 @@ if menu_selection == "📅 Presupuesto Mensual":
             use_container_width=True,
             key=f"ing_{sel_year}_{sel_month}"
         )
+        if not edited_ing.equals(data_m["ingresos"]):
+            data_m["ingresos"] = edited_ing
+            st.rerun()
 
         st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
 
@@ -972,16 +1116,12 @@ elif menu_selection == "📊 Resumen Anual":
         fig_an.add_trace(go.Bar(x=df_annual["Mes"], y=df_annual["Gastos"], name="Gastos", marker_color="#D74546"))
         fig_an.add_trace(go.Bar(x=df_annual["Mes"], y=df_annual["Ahorros"], name="Ahorros", marker_color="#00385C"))
         fig_an.update_layout(
-            template="plotly_white",
-            title=dict(text=f"Comportamiento Mes a Mes ({sel_year})", x=0.5, xanchor="center", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
+            template=chart_template,
+            title=dict(text=f"Comportamiento Mes a Mes ({sel_year})", x=0.5, xanchor="center", font=dict(color=chart_text, size=14)),
             barmode='group',
             height=340,
-            paper_bgcolor="#FFFFFF",
-            plot_bgcolor="#FFFFFF",
-            font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
-            legend=dict(font=dict(color="#1E293B")),
-            xaxis=dict(tickfont=dict(color="#00385C")),
-            yaxis=dict(tickfont=dict(color="#00385C"))
+            paper_bgcolor=chart_bg,
+            plot_bgcolor=chart_bg
         )
         st.plotly_chart(fig_an, use_container_width=True)
         
@@ -1051,12 +1191,10 @@ elif menu_selection == "📈 Horizontes Financieros":
         fig_cp = px.bar(df_cp, x="Periodo", y=["Aporte Acumulado", "Rendimientos / Interés Compuesto"],
                         color_discrete_sequence=["#00385C", "#00ACA9"])
         fig_cp.update_layout(
-            template="plotly_white",
-            title=dict(text="Evolución Patrimonial - Corto Plazo", x=0.5, xanchor="center", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
-            paper_bgcolor="#FFFFFF",
-            plot_bgcolor="#FFFFFF",
-            font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
-            legend=dict(font=dict(color="#1E293B"))
+            template=chart_template,
+            title=dict(text="Evolución Patrimonial - Corto Plazo", x=0.5, xanchor="center", font=dict(color=chart_text, size=14)),
+            paper_bgcolor=chart_bg,
+            plot_bgcolor=chart_bg
         )
         st.plotly_chart(fig_cp, use_container_width=True)
         st.dataframe(df_cp.style.format({"Aporte Acumulado": "${:,.2f}", "Rendimientos / Interés Compuesto": "${:,.2f}", "Patrimonio Total Estimado": "${:,.2f}"}), use_container_width=True)
@@ -1076,11 +1214,10 @@ elif menu_selection == "📈 Horizontes Financieros":
             
         fig_mp = px.area(df_mp, x="Periodo", y="Patrimonio Total Estimado", color_discrete_sequence=["#00ACA9"])
         fig_mp.update_layout(
-            template="plotly_white",
-            title=dict(text="Curva de Crecimiento a 5 Años", x=0.5, xanchor="center", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
-            paper_bgcolor="#FFFFFF",
-            plot_bgcolor="#FFFFFF",
-            font=dict(color="#00385C", family="Nunito Sans, sans-serif")
+            template=chart_template,
+            title=dict(text="Curva de Crecimiento a 5 Años", x=0.5, xanchor="center", font=dict(color=chart_text, size=14)),
+            paper_bgcolor=chart_bg,
+            plot_bgcolor=chart_bg
         )
         st.plotly_chart(fig_mp, use_container_width=True)
         st.dataframe(df_mp.style.format({"Aporte Acumulado": "${:,.2f}", "Rendimientos / Interés Compuesto": "${:,.2f}", "Patrimonio Total Estimado": "${:,.2f}"}), use_container_width=True)
@@ -1104,13 +1241,11 @@ elif menu_selection == "📈 Horizontes Financieros":
         fig_lp.add_trace(go.Scatter(x=df_lp["Año"], y=df_lp["Aporte Acumulado"], name="Aporte Acumulado", fill='tozeroy', line=dict(color='#00385C')))
         fig_lp.add_trace(go.Scatter(x=df_lp["Año"], y=df_lp["Patrimonio Total Estimado"], name="Patrimonio Total con Interés Compuesto", fill='tonexty', line=dict(color='#00ACA9')))
         fig_lp.update_layout(
-            template="plotly_white",
-            title=dict(text="Efecto Bola de Nieve a Largo Plazo", x=0.5, xanchor="center", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
+            template=chart_template,
+            title=dict(text="Efecto Bola de Nieve a Largo Plazo", x=0.5, xanchor="center", font=dict(color=chart_text, size=14)),
             height=380,
-            paper_bgcolor="#FFFFFF",
-            plot_bgcolor="#FFFFFF",
-            font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
-            legend=dict(font=dict(color="#1E293B"))
+            paper_bgcolor=chart_bg,
+            plot_bgcolor=chart_bg
         )
         st.plotly_chart(fig_lp, use_container_width=True)
         st.dataframe(df_lp.style.format({"Aporte Acumulado": "${:,.2f}", "Rendimientos / Interés Compuesto": "${:,.2f}", "Patrimonio Total Estimado": "${:,.2f}"}), use_container_width=True)
@@ -1122,30 +1257,71 @@ elif menu_selection == "👑 Panel de Administración":
     st.markdown("""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — CENTRO DE CONTROL SUPERUSUARIO</div>
-      <div class='main-header-subtitle'>Gestión Total de Usuarios, Roles, Creación, Edición y Auditoría Forense</div>
+      <div class='main-header-subtitle'>Gestión Total de Usuarios, Aprobación, Roles, Notificaciones SMTP y Auditoría Forense</div>
     </div>
     """, unsafe_allow_html=True)
     
     t_list, t_create, t_edit, t_audit = st.tabs([
-        "👥 Listado de Usuarios",
+        "👥 Listado & Aprobación de Usuarios",
         "➕ Crear Nuevo Usuario",
         "✏️ Editar Usuarios Existentes",
-        "🛡️ Bitácora de Seguridad"
+        "🛡️ Bitácora de Seguridad & Notificaciones"
     ])
     
+    # ------------------------------------------
+    # LISTADO Y APROBACIÓN DE TODOS LOS USUARIOS
+    # ------------------------------------------
     with t_list:
         st.subheader("Directorio Global de Usuarios Registrados")
-        user_list = []
+        st.info("💡 Como Super Administrador, puedes activar o desactivar el acceso de cualquier usuario marcando la casilla 'Activo'. Los usuarios no aprobados no podrán iniciar sesión.")
+        
+        all_user_records = []
         for mail, dat in st.session_state.users.items():
-            user_list.append({
+            all_user_records.append({
+                "Activo": dat.get("is_active", True),
                 "Nombre": dat["name"],
                 "Correo Electrónico": mail,
                 "Rol": dat["role"],
+                "Registrado el": dat.get("created_at", "N/A"),
                 "Intentos Fallidos": dat["failed_attempts"],
                 "Bloqueado": "Sí" if (dat["locked_until"] and datetime.now() < dat["locked_until"]) else "No"
             })
-        st.dataframe(pd.DataFrame(user_list), use_container_width=True)
+            
+        df_users_all = pd.DataFrame(all_user_records)
         
+        edited_user_table = st.data_editor(
+            df_users_all,
+            column_config={
+                "Activo": st.column_config.CheckboxColumn("Activo / Aprobado", help="Desmarca para suspender o marca para permitir acceso"),
+                "Correo Electrónico": st.column_config.TextColumn("Correo Electrónico", disabled=True),
+                "Nombre": st.column_config.TextColumn("Nombre", disabled=True),
+                "Rol": st.column_config.TextColumn("Rol", disabled=True),
+                "Registrado el": st.column_config.TextColumn("Registrado el", disabled=True),
+                "Intentos Fallidos": st.column_config.NumberColumn("Intentos Fallidos", disabled=True),
+                "Bloqueado": st.column_config.TextColumn("Bloqueado", disabled=True)
+            },
+            disabled=["Nombre", "Correo Electrónico", "Rol", "Registrado el", "Intentos Fallidos", "Bloqueado"],
+            hide_index=True,
+            use_container_width=True,
+            key="admin_user_approval_table"
+        )
+        
+        changes_detected = False
+        for _, row in edited_user_table.iterrows():
+            target_m = row["Correo Electrónico"]
+            current_status = st.session_state.users[target_m].get("is_active", True)
+            new_status = row["Activo"]
+            if current_status != new_status:
+                st.session_state.users[target_m]["is_active"] = new_status
+                changes_detected = True
+                
+        if changes_detected:
+            st.success("✅ Estado de aprobación actualizado exitosamente.")
+            st.rerun()
+
+    # ------------------------------------------
+    # CREAR NUEVO USUARIO DESDE EL PANEL
+    # ------------------------------------------
     with t_create:
         st.subheader("➕ Dar de Alta un Nuevo Usuario")
         with st.form("form_admin_create_user"):
@@ -1153,6 +1329,7 @@ elif menu_selection == "👑 Panel de Administración":
             new_u_email = st.text_input("Correo Electrónico").strip().lower()
             new_u_pass = st.text_input("Contraseña Temporal", type="password")
             new_u_role = st.selectbox("Rol Asignado", ["Usuario", "Superusuario"])
+            new_u_active = st.checkbox("Activar acceso inmediatamente", value=True)
             btn_create_u = st.form_submit_button("Crear y Registrar Usuario", use_container_width=True)
             
             if btn_create_u:
@@ -1167,13 +1344,23 @@ elif menu_selection == "👑 Panel de Administración":
                         "role": new_u_role,
                         "hash": nhash,
                         "salt": nsalt,
+                        "is_active": new_u_active,
                         "failed_attempts": 0,
-                        "locked_until": None
+                        "locked_until": None,
+                        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M")
                     }
                     init_user_finances(new_u_email)
-                    st.success(f"Usuario {new_u_name} registrado exitosamente con el rol '{new_u_role}'.")
+                    send_security_alert(
+                        new_u_email, 
+                        "USUARIO REGISTRADO POR ADMIN", 
+                        f"Usuario {new_u_name} ({new_u_role}) registrado administrativamente con estado: {'Activo' if new_u_active else 'Inactivo'}."
+                    )
+                    st.success(f"Usuario {new_u_name} registrado exitosamente.")
                     st.rerun()
 
+    # ------------------------------------------
+    # EDITAR USUARIOS EXISTENTES
+    # ------------------------------------------
     with t_edit:
         st.subheader("✏️ Modificar o Gestionar Usuario")
         user_emails = list(st.session_state.users.keys())
@@ -1185,6 +1372,7 @@ elif menu_selection == "👑 Panel de Administración":
             st.write(f"Editando cuenta: **{sel_u_email}**")
             ed_u_name = st.text_input("Nombre Completo", value=target_u["name"])
             ed_u_role = st.selectbox("Rol", ["Usuario", "Superusuario"], index=0 if target_u["role"] == "Usuario" else 1)
+            ed_u_active = st.checkbox("Cuenta Activa / Permitir Acceso al Sistema", value=target_u.get("is_active", True))
             ed_u_new_pass = st.text_input("Nueva Contraseña (dejar en blanco para no modificarla)", type="password")
             ed_u_unlock = st.checkbox("Restablecer intentos fallidos y desbloquear cuenta", value=True)
             
@@ -1197,6 +1385,7 @@ elif menu_selection == "👑 Panel de Administración":
             if btn_save_u:
                 target_u["name"] = ed_u_name
                 target_u["role"] = ed_u_role
+                target_u["is_active"] = ed_u_active
                 if ed_u_unlock:
                     target_u["failed_attempts"] = 0
                     target_u["locked_until"] = None
@@ -1204,6 +1393,7 @@ elif menu_selection == "👑 Panel de Administración":
                     nhash, nsalt = hash_password(ed_u_new_pass.strip())
                     target_u["hash"] = nhash
                     target_u["salt"] = nsalt
+                    send_security_alert(sel_u_email, "CLAVE MODIFICADA POR ADMIN", "Contraseña redefinida administrativamente.")
                     
                 st.success(f"Usuario {ed_u_name} actualizado exitosamente.")
                 st.rerun()
@@ -1215,12 +1405,72 @@ elif menu_selection == "👑 Panel de Administración":
                     del st.session_state.users[sel_u_email]
                     if sel_u_email in st.session_state.finances:
                         del st.session_state.finances[sel_u_email]
+                    send_security_alert(sel_u_email, "USUARIO ELIMINADO", "Cuenta eliminada por el Super Administrador.")
                     st.success("Usuario eliminado del sistema.")
                     st.rerun()
 
+    # ------------------------------------------
+    # BITÁCORA Y CONFIGURACIÓN SMTP
+    # ------------------------------------------
     with t_audit:
-        st.subheader("Bitácora Forense y Registro Criptográfico de Alertas")
+        st.subheader("🛡️ Configuración de Alertas por Correo Electrónico (SMTP)")
+        st.info("Configura la cuenta de correo para enviar notificaciones al Administrador cuando ocurran registros de nuevos usuarios, intentos fallidos o incidentes de seguridad.")
+        
+        cfg = st.session_state.smtp_config
+        with st.form("form_smtp_settings"):
+            c_sm1, c_sm2 = st.columns(2)
+            with c_sm1:
+                smtp_server = st.text_input("Servidor SMTP", value=cfg["server"], help="Ej: smtp.gmail.com o smtp.office365.com")
+                smtp_sender = st.text_input("Correo Emisor (Remitente)", value=cfg["sender"], placeholder="tu_correo@gmail.com")
+                smtp_pass = st.text_input("Contraseña de Aplicación / SMTP", type="password", value=cfg["password"], help="Para Gmail, genera una 'Contraseña de aplicación'")
+            with c_sm2:
+                smtp_port = st.number_input("Puerto SMTP", value=int(cfg["port"]), step=1)
+                smtp_recipient = st.text_input("Correo Notificador (Destinatario)", value=cfg["recipient"], placeholder="admin@tudominio.com")
+                smtp_active = st.checkbox("Activar despacho automático de alertas por correo", value=cfg["active"])
+                
+            c_btn_save, c_btn_test = st.columns(2)
+            with c_btn_save:
+                btn_save_smtp = st.form_submit_button("💾 Guardar Configuración SMTP", use_container_width=True)
+            with c_btn_test:
+                btn_test_smtp = st.form_submit_button("✉️ Enviar Correo de Prueba", use_container_width=True)
+                
+            if btn_save_smtp:
+                st.session_state.smtp_config = {
+                    "server": smtp_server.strip(),
+                    "port": int(smtp_port),
+                    "sender": smtp_sender.strip(),
+                    "password": smtp_pass.strip(),
+                    "recipient": smtp_recipient.strip(),
+                    "active": smtp_active
+                }
+                st.success("Configuración de correo actualizada correctamente.")
+                st.rerun()
+                
+            if btn_test_smtp:
+                if not smtp_sender.strip() or not smtp_pass.strip() or not smtp_recipient.strip():
+                    st.warning("Completa el remitente, la contraseña y el destinatario antes de enviar una prueba.")
+                else:
+                    try:
+                        test_msg = MIMEMultipart("alternative")
+                        test_msg["Subject"] = "✅ [PRUEBA] Notificación de Seguridad OptiBudget Pro"
+                        test_msg["From"] = smtp_sender.strip()
+                        test_msg["To"] = smtp_recipient.strip()
+                        body = "<h3>Prueba de Alerta Exitosa</h3><p>El sistema de notificaciones de OptiBudget Pro está conectado y listo para alertar ante nuevos registros e incidentes.</p>"
+                        test_msg.attach(MIMEText(body, "html"))
+                        
+                        srv = smtplib.SMTP(smtp_server.strip(), int(smtp_port), timeout=8)
+                        srv.starttls()
+                        srv.login(smtp_sender.strip(), smtp_pass.strip())
+                        srv.sendmail(smtp_sender.strip(), smtp_recipient.strip(), test_msg.as_string())
+                        srv.quit()
+                        st.success(f"¡Correo de prueba enviado con éxito a {smtp_recipient.strip()}!")
+                    except Exception as err:
+                        st.error(f"Fallo al conectar con el servidor de correo: {err}")
+
+        st.markdown("---")
+        st.subheader("📋 Bitácora Forense de Eventos y Notificaciones Despachadas")
         if st.session_state.audit_log:
-            st.dataframe(pd.DataFrame(st.session_state.audit_log), use_container_width=True)
+            df_log = pd.DataFrame(st.session_state.audit_log)
+            st.dataframe(df_log, use_container_width=True)
         else:
-            st.success("Sin eventos de seguridad anómalos.")
+            st.success("Sin eventos de seguridad registrados.")
