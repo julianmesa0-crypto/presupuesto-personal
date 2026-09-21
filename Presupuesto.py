@@ -282,7 +282,6 @@ if token_in_url:
     else:
         st.session_state.current_user = None
 
-# Script JavaScript de inactividad de 60 segundos y Auto-Refresco suave cada 8 segundos
 inactivity_and_sync_js = """
 <script>
 let idleTime = 0;
@@ -314,50 +313,51 @@ setTimeout(() => {
 st.markdown(inactivity_and_sync_js, unsafe_allow_html=True)
 
 # ==========================================
-# 4. ESTILOS CSS ADAPTABLES (CONTRASTE EN TABLAS: FONDO BLANCO Y LETRAS AZULES EN LIGHT)
+# 4. CONTROL CROMÁTICO ESTRICTO PARA TABLAS Y CONTENEDORES
 # ==========================================
 if st.session_state.app_theme == "Dark":
     theme_css = """
     :root {
       color-scheme: dark !important;
-      --card-bg: #1E293B;
-      --card-border: #334155;
-      --main-text: #F8FAFC;
-      --sub-text: #94A3B8;
+      --card-bg: #00385C;
+      --card-border: #18688D;
+      --main-text: #FFFFFF;
+      --sub-text: #A0DFF7;
       --kpi-title: #38BDF8;
-      --banner-bg: linear-gradient(135deg, #0F172A, #1E3A8A);
-      --badge-bg: #1E3A5F;
-      --badge-border: #38BDF8;
-      --badge-text: #E0F2FE;
-      --restante-bg: #0F2922;
+      --banner-bg: linear-gradient(135deg, #00223A, #00385C);
+      --badge-bg: #08283D;
+      --badge-border: #00ACA9;
+      --badge-text: #FFFFFF;
+      --restante-bg: #0A3D42;
       --restante-border: #00ACA9;
-      --restante-text: #2DD4BF;
-      --notif-bg: #1E293B;
+      --restante-text: #E5FFFE;
+      --notif-bg: #00385C;
       --notif-border: #00ACA9;
-      --notif-text: #F8FAFC;
-      --tbl-bg: #1E293B;
-      --tbl-text: #F8FAFC;
-      --tbl-border: #334155;
+      --notif-text: #FFFFFF;
+      --tbl-bg: #00385C;
+      --tbl-text: #FFFFFF;
+      --tbl-border: #18688D;
     }
     html, body, .stApp, [data-testid="stAppViewContainer"], .main {
-      background-color: #0F172A !important;
-      color: #F8FAFC !important;
+      background-color: #031524 !important;
+      color: #FFFFFF !important;
     }
     p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
-      color: #F8FAFC !important;
+      color: #FFFFFF !important;
     }
     """
     chart_template = "plotly_dark"
-    chart_bg = "#1E293B"
-    chart_text = "#F8FAFC"
-elif st.session_state.app_theme == "Light":
+    chart_bg = "#00385C"
+    chart_text = "#FFFFFF"
+else:
+    # Light o System: Fondo blanco y texto azul corporativo #00385C
     theme_css = """
     :root {
       color-scheme: light !important;
       --card-bg: #FFFFFF;
-      --card-border: #CBD5E1;
-      --main-text: #1E293B;
-      --sub-text: #64748B;
+      --card-border: #E2E8F0;
+      --main-text: #00385C;
+      --sub-text: #18688D;
       --kpi-title: #00385C;
       --banner-bg: linear-gradient(135deg, #00385C, #0F4F7F);
       --badge-bg: #E5F6FF;
@@ -375,41 +375,14 @@ elif st.session_state.app_theme == "Light":
     }
     html, body, .stApp, [data-testid="stAppViewContainer"], .main {
       background-color: #FFFFFF !important;
-      color: #1E293B !important;
+      color: #00385C !important;
     }
     p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
-      color: #1E293B !important;
+      color: #00385C !important;
     }
     """
     chart_template = "plotly_white"
     chart_bg = "#FFFFFF"
-    chart_text = "#00385C"
-else:
-    # System: Garantiza fondo blanco y letras azul marino en las tablas
-    theme_css = """
-    :root {
-      --card-bg: var(--background-color, #FFFFFF);
-      --card-border: rgba(148, 163, 184, 0.3);
-      --main-text: var(--text-color, #1E293B);
-      --sub-text: #64748B;
-      --kpi-title: #00385C;
-      --banner-bg: linear-gradient(135deg, #00385C, #0F4F7F);
-      --badge-bg: rgba(0, 56, 92, 0.1);
-      --badge-border: #00385C;
-      --badge-text: #00385C;
-      --restante-bg: rgba(0, 172, 169, 0.08);
-      --restante-border: #00ACA9;
-      --restante-text: #00ACA9;
-      --notif-bg: #E5F6FF;
-      --notif-border: #00385C;
-      --notif-text: #00385C;
-      --tbl-bg: #FFFFFF;
-      --tbl-text: #00385C;
-      --tbl-border: #CBD5E1;
-    }
-    """
-    chart_template = "none"
-    chart_bg = "rgba(0,0,0,0)"
     chart_text = "#00385C"
 
 st.markdown(f"""
@@ -422,17 +395,12 @@ html, body, .stApp {{
   font-family: 'Nunito Sans', sans-serif !important;
 }}
 
-/* REGLAS ESTRICTAS DE CONTRASTE PARA TABLAS (FONDO BLANCO Y LETRAS AZULES EN LIGHT/SYSTEM) */
-[data-testid="stDataFrame"], [data-testid="stDataEditor"] {{
+/* REGLAS DIRECTAS PARA DATA EDITOR Y TABLAS */
+[data-testid="stDataFrame"], [data-testid="stDataEditor"], div[data-testid="stDataEditor"] > div {{
   background-color: var(--tbl-bg) !important;
   color: var(--tbl-text) !important;
   border: 1px solid var(--tbl-border) !important;
   border-radius: 8px !important;
-}}
-
-[data-testid="stDataFrame"] div, [data-testid="stDataEditor"] div {{
-  background-color: var(--tbl-bg) !important;
-  color: var(--tbl-text) !important;
 }}
 
 [data-testid="stDataFrame"] table, [data-testid="stDataEditor"] table {{
@@ -453,9 +421,11 @@ html, body, .stApp {{
   border-bottom: 1px solid var(--tbl-border) !important;
 }}
 
-/* Canvas de Glide Data Grid forzado para evitar herencia de fondo azul */
-[data-testid="stDataFrame"] canvas, [data-testid="stDataEditor"] canvas {{
-  filter: none !important;
+/* Inputs del sistema */
+div[data-baseweb="select"] > div, input {{
+  background-color: var(--tbl-bg) !important;
+  color: var(--tbl-text) !important;
+  border-color: var(--tbl-border) !important;
 }}
 
 /* SIDEBAR ESTILO SAP BYDESIGN COLOR #29AFE2 CON LETRAS BLANCAS */
@@ -479,12 +449,12 @@ html, body, .stApp {{
 [data-testid="stSidebar"] div[data-baseweb="select"] > div,
 [data-testid="stSidebar"] input {{
   background-color: #FFFFFF !important;
-  color: #1E293B !important;
+  color: #00385C !important;
   border-color: #FFFFFF !important;
 }}
 
 [data-testid="stSidebar"] div[data-baseweb="select"] * {{
-  color: #1E293B !important;
+  color: #00385C !important;
 }}
 
 .sap-work-center-header {{
@@ -641,7 +611,6 @@ html, body, .stApp {{
 </style>
 """, unsafe_allow_html=True)
 
-# Sonido de Campana de Notificación Web Audio API
 def trigger_bell_sound():
     st.markdown("""
     <script>
@@ -692,7 +661,6 @@ if st.session_state.current_user is None or st.session_state.current_user not in
                     if login_email in all_users_fresh:
                         u_data = all_users_fresh[login_email]
                         
-                        # 1. VALIDACIÓN: USUARIO ACTIVO/APROBADO POR EL ADMIN
                         if not u_data.get("is_active", True):
                             st.warning("⏳ Tu cuenta ha sido registrada pero está pendiente de aprobación por el Administrador. No puedes ingresar hasta que sea validada.")
                         elif u_data.get("locked_until") and datetime.now() < datetime.strptime(u_data["locked_until"], "%Y-%m-%d %H:%M:%S"):
@@ -1101,7 +1069,6 @@ if menu_selection == "📅 Presupuesto Mensual":
     col_izq, col_der = st.columns(2)
 
     with col_izq:
-        # 1. INGRESOS
         st.markdown("<div class='section-badge'>💵 1. INGRESOS (VALOR RECIBIDO)</div>", unsafe_allow_html=True)
         st.caption("Editable directamente en la tabla. Se guarda y recalcula en tiempo real.")
         edited_ing = st.data_editor(
@@ -1124,7 +1091,6 @@ if menu_selection == "📅 Presupuesto Mensual":
 
         st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
 
-        # 2. FACTURAS (GASTOS FIJOS)
         st.markdown("<div class='section-badge'>📑 2. FACTURAS (GASTOS FIJOS)</div>", unsafe_allow_html=True)
         st.caption("🔒 Protegida contra edición accidental. Usa los botones inferiores.")
         df_fac_display = df_fac.copy()
@@ -1195,7 +1161,6 @@ if menu_selection == "📅 Presupuesto Mensual":
                 st.info("Sin facturas para editar.")
 
     with col_der:
-        # 3. GASTOS VARIABLES
         st.markdown("<div class='section-badge'>🛒 3. GASTOS VARIABLES</div>", unsafe_allow_html=True)
         st.caption("🔒 Protegida contra edición accidental. Usa los botones inferiores.")
         df_var_display = df_var.copy()
@@ -1264,7 +1229,6 @@ if menu_selection == "📅 Presupuesto Mensual":
 
         st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
 
-        # 4. AHORROS E INVERSIÓN
         st.markdown("<div class='section-badge'>🎯 4. AHORROS E INVERSIÓN (20%)</div>", unsafe_allow_html=True)
         st.caption("🔒 Protegida contra edición accidental. Usa los botones inferiores.")
         df_ah_display = df_ah.copy()
@@ -1608,9 +1572,6 @@ elif menu_selection == "👑 Panel de Administración":
         "🛡️ Bitácora de Seguridad & Notificaciones"
     ])
     
-    # ------------------------------------------
-    # LISTADO Y APROBACIÓN DE TODOS LOS USUARIOS (PERSISTENTE)
-    # ------------------------------------------
     with t_list:
         st.subheader("Directorio Global de Usuarios Registrados")
         st.info("💡 Como Super Administrador, puedes activar o desactivar el acceso de cualquier usuario marcando la casilla 'Activo'. Los usuarios registrados en móvil o web aparecen aquí en tiempo real.")
@@ -1663,9 +1624,6 @@ elif menu_selection == "👑 Panel de Administración":
             st.success("✅ Estado de aprobación actualizado exitosamente y guardado en el servidor.")
             st.rerun()
 
-    # ------------------------------------------
-    # CREAR NUEVO USUARIO DESDE EL PANEL
-    # ------------------------------------------
     with t_create:
         st.subheader("➕ Dar de Alta un Nuevo Usuario")
         with st.form("form_admin_create_user"):
@@ -1705,9 +1663,6 @@ elif menu_selection == "👑 Panel de Administración":
                     st.success(f"Usuario {new_u_name} registrado exitosamente con contraseña provisional 'Welcome123'.")
                     st.rerun()
 
-    # ------------------------------------------
-    # EDITAR USUARIOS EXISTENTES (SIN ARRASTRE DE DATOS)
-    # ------------------------------------------
     with t_edit:
         st.subheader("✏️ Modificar o Gestionar Usuario")
         all_users_fresh = get_all_users()
@@ -1779,9 +1734,6 @@ elif menu_selection == "👑 Panel de Administración":
                     st.success("Usuario eliminado del sistema.")
                     st.rerun()
 
-    # ------------------------------------------
-    # BITÁCORA Y CONFIGURACIÓN SMTP
-    # ------------------------------------------
     with t_audit:
         st.subheader("🛡️ Configuración de Alertas por Correo Electrónico (SMTP)")
         st.info("Configura la cuenta de correo para enviar notificaciones al Administrador cuando ocurran registros de nuevos usuarios, intentos fallidos o incidentes de seguridad.")
