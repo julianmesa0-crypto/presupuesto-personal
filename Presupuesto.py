@@ -23,9 +23,9 @@ st.set_page_config(
 )
 
 # ==========================================
-# 2. ESTILOS CSS - FONDO BLANCO ABSOLUTO (INCLUSO CON MODO OSCURO DEL CELULAR)
+# 2. ESTILOS CSS - FORZAR FONDO BLANCO Y ALTO CONTRASTE
 # ==========================================
-st.markdown('''
+st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&display=swap');
 
@@ -46,56 +46,61 @@ st.markdown('''
   --color-accent-deep: #186664;
 
   --color-neutral-text: #1E293B;
-  --color-border-subtle: #E2E8F0;
+  --color-border-subtle: #CBD5E1;
 }
 
+/* BLANCO TOTAL EN TODA LA PÁGINA Y SIDEBAR */
 html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stSidebar"], [data-testid="stSidebarContent"], .main {
   font-family: var(--font-family-base) !important;
   background-color: #FFFFFF !important;
   color: #1E293B !important;
 }
 
+/* Forzar que todos los textos sean oscuros y legibles */
 p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
   color: #1E293B !important;
 }
 
+/* Sidebar styling */
 [data-testid="stSidebar"] {
-  border-right: 1px solid #E2E8F0 !important;
+  background-color: #F8FAFC !important;
+  border-right: 1.5px solid #E2E8F0 !important;
 }
 
+/* Tarjetas y banners */
 .main-header-banner {
   background: linear-gradient(135deg, #00385C, #0F4F7F) !important;
   color: #FFFFFF !important;
-  padding: 1.3rem 2rem;
+  padding: 1.2rem 1.8rem;
   border-radius: 12px;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.2rem;
   box-shadow: 0 4px 14px rgba(0, 56, 92, 0.1);
 }
 
 .main-header-title {
-  font-size: 1.8rem;
+  font-size: 1.7rem;
   font-weight: 800;
   margin: 0;
   color: #FFFFFF !important;
 }
 
 .main-header-subtitle {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   color: #E2E8F0 !important;
   margin-top: 4px;
 }
 
 .kpi-card {
   background: #FFFFFF !important;
-  border: 1px solid #E2E8F0 !important;
+  border: 1.5px solid #E2E8F0 !important;
   border-radius: 10px;
-  padding: 1.1rem 1rem;
+  padding: 1rem 0.8rem;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
 }
 
 .kpi-card-label {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   color: #18688D !important;
@@ -103,23 +108,23 @@ p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
 }
 
 .kpi-card-value {
-  font-size: 1.6rem;
+  font-size: 1.55rem;
   font-weight: 800;
   color: #00385C !important;
-  margin-top: 0.3rem;
+  margin-top: 0.25rem;
 }
 
 .restante-card {
   background: #FFFFFF !important;
   border: 2px solid #00ACA9 !important;
   border-radius: 10px;
-  padding: 1.1rem 1rem;
+  padding: 1rem 0.8rem;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 172, 169, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 172, 169, 0.1);
 }
 
 .restante-card-label {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;
   color: #186664 !important;
@@ -127,29 +132,37 @@ p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
 }
 
 .restante-card-value {
-  font-size: 1.65rem;
+  font-size: 1.6rem;
   font-weight: 800;
   color: #00ACA9 !important;
-  margin-top: 0.3rem;
+  margin-top: 0.25rem;
 }
 
 .section-badge {
   background-color: #E5F6FF !important;
-  color: #032033 !important;
-  font-weight: 700;
-  font-size: 0.88rem;
-  padding: 6px 14px;
+  color: #00385C !important;
+  font-weight: 800;
+  font-size: 0.85rem;
+  padding: 6px 12px;
   border-radius: 6px;
   display: inline-block;
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.6rem;
   border-left: 4px solid #00385C !important;
 }
 
-[data-testid="stDataFrame"] {
+/* Forzar que los DataFrames y DataEditors no se muestren negros */
+[data-testid="stDataFrame"], [data-testid="stDataEditor"], div[data-testid="stDataEditor"] > div {
   background-color: #FFFFFF !important;
+  border-radius: 8px;
+}
+
+div[data-baseweb="select"] > div, input {
+  background-color: #FFFFFF !important;
+  color: #1E293B !important;
+  border-color: #CBD5E1 !important;
 }
 </style>
-''', unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # ==========================================
 # 3. SEGURIDAD Y GESTIÓN DE SESIONES
@@ -168,10 +181,10 @@ CHRONO_MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
                  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
 def create_initial_example_month():
-    """Crea un mes con SOLO 1 fila de ejemplo por concepto y con valores en 0.0"""
+    """Crea un mes con SOLO 1 fila de ejemplo por concepto, sin presupuesto y con valores en 0.0"""
     return {
         "ingresos": pd.DataFrame([
-            {"Check": False, "Descripción": "Salario / Ingreso Principal", "Presupuesto": 0.0, "Actual": 0.0}
+            {"Check": False, "Descripción": "Salario / Ingreso Principal", "Actual": 0.0}
         ]),
         "facturas": pd.DataFrame([
             {"Descripción": "Renta / Vivienda", "Monto": 0.0, "Tipo": "Necesidades", "Fecha": "01"}
@@ -186,10 +199,11 @@ def create_initial_example_month():
     }
 
 def clone_structure_from_month(source_month_data):
-    """Clona la lista de conceptos del mes previo pero reinicia todos los valores en 0.0"""
+    """Clona la lista de conceptos del mes previo reiniciando los valores a 0.0"""
     new_ing = source_month_data["ingresos"].copy()
+    if "Presupuesto" in new_ing.columns:
+        new_ing = new_ing.drop(columns=["Presupuesto"])
     new_ing["Check"] = False
-    new_ing["Presupuesto"] = 0.0
     new_ing["Actual"] = 0.0
     
     new_fac = source_month_data["facturas"].copy()
@@ -211,7 +225,7 @@ def clone_structure_from_month(source_month_data):
         "seguimiento": new_seg
     }
 
-DATA_VERSION = "v4_dynamic_month_year"
+DATA_VERSION = "v5_clean_no_presupuesto_2cols"
 
 def init_system_state():
     if "data_schema_version" not in st.session_state or st.session_state.data_schema_version != DATA_VERSION:
@@ -258,7 +272,7 @@ def init_system_state():
 init_system_state()
 
 def init_user_finances(email):
-    """Inicializa al usuario con solo el año 2026 y solo el mes de Enero con 1 fila de ejemplo en 0"""
+    """Inicializa al usuario solo con el año 2026 y solo con el mes de Enero limpio"""
     if email not in st.session_state.finances:
         st.session_state.finances[email] = {
             2026: {
@@ -279,12 +293,12 @@ def send_security_alert(target_email, event_type, details):
 # 4. PANTALLA DE ACCESO (LOGIN & REGISTRO)
 # ==========================================
 if st.session_state.current_user is None:
-    st.markdown('''
+    st.markdown("""
     <div style='text-align: center; padding: 2.5rem 0 1rem 0;'>
       <h1 style='color: #00385C !important; font-size: 2.4rem; font-weight: 800; margin: 0;'>💼 OptiBudget Pro</h1>
       <p style='color: #18688D !important; font-size: 1.05rem; margin-top: 6px;'>Gestión Financiera Multi-Horizonte con Seguridad Avanzada</p>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     col_l, col_c, col_r = st.columns([1, 1.4, 1])
     with col_c:
@@ -360,25 +374,23 @@ init_user_finances(current_email)
 user_fin = st.session_state.finances[current_email]
 
 with st.sidebar:
-    st.markdown('''
+    st.markdown("""
     <div style='text-align: center; margin-bottom: 0.8rem;'>
       <div style='font-size: 1.35rem; font-weight: 800; color: #00385C;'>💼 OptiBudget Pro</div>
       <div style='font-size: 0.82rem; color: #18688D;'>Finanzas Inteligentes Año a Año</div>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-    st.markdown(f'''
-    <div style='background: #FFFFFF; border: 1px solid #A0DFF7; padding: 12px; border-radius: 8px; margin-bottom: 1rem;'>
+    st.markdown(f"""
+    <div style='background: #FFFFFF; border: 1.5px solid #A0DFF7; padding: 12px; border-radius: 8px; margin-bottom: 1rem;'>
       <div style='font-size: 0.78rem; color: #0A405F; font-weight: 700;'>USUARIO ACTIVO</div>
       <div style='font-size: 1.05rem; color: #00385C; font-weight: 700;'>{user_info['name']}</div>
       <div style='font-size: 0.82rem; color: #18688D;'>{current_email}</div>
       <span style='background: #00385C; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;'>{user_info['role']}</span>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
-    # ---------------------------------------------
-    # GESTIÓN DE AÑOS (SOLO LOS CREADOS)
-    # ---------------------------------------------
+    # GESTIÓN DE AÑOS
     st.markdown("### 📅 Gestión de Años")
     created_years = sorted(list(user_fin.keys()))
     sel_year = st.selectbox("Año Fiscal Activo", created_years, index=len(created_years)-1)
@@ -399,9 +411,7 @@ with st.sidebar:
                     st.success(f"¡Año {new_year_input} creado exitosamente con Enero inicializado!")
                     st.rerun()
 
-    # ---------------------------------------------
-    # GESTIÓN DE MESES (SOLO LOS CREADOS PARA EL AÑO ACTIVO)
-    # ---------------------------------------------
+    # GESTIÓN DE MESES
     st.markdown("### 🗓️ Gestión de Meses")
     months_in_active_year = [m for m in CHRONO_MONTHS if m in user_fin[sel_year]]
     if not months_in_active_year:
@@ -449,6 +459,9 @@ with st.sidebar:
 if menu_selection == "📅 Presupuesto Mensual":
     data_m = user_fin[sel_year][sel_month]
     
+    if "Presupuesto" in data_m["ingresos"].columns:
+        data_m["ingresos"] = data_m["ingresos"].drop(columns=["Presupuesto"])
+    
     total_ingreso_act = float(data_m["ingresos"]["Actual"].sum()) if not data_m["ingresos"].empty else 0.0
     total_facturas = float(data_m["facturas"]["Monto"].sum()) if not data_m["facturas"].empty else 0.0
     total_var = float(data_m["gastos_var"]["Monto"].sum()) if not data_m["gastos_var"].empty else 0.0
@@ -466,42 +479,42 @@ if menu_selection == "📅 Presupuesto Mensual":
     var_des = data_m["gastos_var"][data_m["gastos_var"]["Tipo"] == "Deseos"]["Monto"].sum() if not data_m["gastos_var"].empty else 0.0
     des_total = fac_des + var_des
     
-    st.markdown(f'''
+    st.markdown(f"""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — {sel_month.upper()} {sel_year}</div>
       <div class='main-header-subtitle'>Gestión y Ejecución Presupuestaria en Tiempo Real</div>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Ingreso Total Recibido</div>
           <div class='kpi-card-value'>${total_ingreso_act:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     with c2:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Total Gastado (Fijo + Var)</div>
           <div class='kpi-card-value'>${total_gastado:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     with c3:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Total Ahorrado / Invertido</div>
           <div class='kpi-card-value'>${total_ahorro:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     with c4:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='restante-card'>
           <div class='restante-card-label'>Dinero Restante Disponible</div>
           <div class='restante-card-value'>${dinero_restante:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
         
     st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
     
@@ -519,7 +532,16 @@ if menu_selection == "📅 Presupuesto Mensual":
             fig_pie = px.pie(df_pie, names="Categoría", values="Monto", hole=0.55,
                              title="Distribución 50/30/20 del Mes",
                              color_discrete_sequence=["#00385C", "#31B4D1", "#00ACA9"])
-        fig_pie.update_layout(margin=dict(t=40, b=10, l=10, r=10), height=250, paper_bgcolor='#FFFFFF', plot_bgcolor='#FFFFFF')
+        fig_pie.update_layout(
+            template="plotly_white",
+            margin=dict(t=40, b=10, l=10, r=10),
+            height=250,
+            paper_bgcolor="#FFFFFF",
+            plot_bgcolor="#FFFFFF",
+            font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
+            title=dict(font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
+            legend=dict(font=dict(color="#1E293B"))
+        )
         st.plotly_chart(fig_pie, use_container_width=True)
         
     with g_col2:
@@ -529,56 +551,64 @@ if menu_selection == "📅 Presupuesto Mensual":
             go.Bar(name='Ahorros', x=['Mes'], y=[total_ahorro], marker_color='#00385C')
         ])
         fig_bar.update_layout(
+            template="plotly_white",
             barmode='group',
             title="Comparativa Flujo de Caja",
             margin=dict(t=40, b=10, l=10, r=10),
             height=250,
-            paper_bgcolor='#FFFFFF',
-            plot_bgcolor='#FFFFFF'
+            paper_bgcolor="#FFFFFF",
+            plot_bgcolor="#FFFFFF",
+            font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
+            title=dict(font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
+            legend=dict(font=dict(color="#1E293B")),
+            xaxis=dict(tickfont=dict(color="#00385C")),
+            yaxis=dict(tickfont=dict(color="#00385C"))
         )
         st.plotly_chart(fig_bar, use_container_width=True)
 
     st.markdown("---")
 
     # ==========================================
-    # SECCIÓN 1: INGRESOS (CONSERVADO CON PRESUPUESTO VS ACTUAL)
+    # DISTRIBUCIÓN EN 2 COLUMNAS DE LAS TABLAS
     # ==========================================
-    st.markdown("<div class='section-badge'>💵 INGRESOS (PRESUPUESTADO VS ACTUAL)</div>", unsafe_allow_html=True)
-    st.caption("ℹ️ En ingresos se mantiene la comparativa editable directamente.")
-    data_m["ingresos"] = st.data_editor(
-        data_m["ingresos"],
-        column_config={
-            "Check": st.column_config.CheckboxColumn("✓", default=False),
-            "Presupuesto": st.column_config.NumberColumn(format="$%.2f"),
-            "Actual": st.column_config.NumberColumn(format="$%.2f")
-        },
-        num_rows="dynamic",
-        use_container_width=True,
-        key=f"ing_{sel_year}_{sel_month}"
-    )
+    col_izq, col_der = st.columns(2)
 
-    st.markdown("---")
+    # ------------------------------------------
+    # COLUMNA IZQUIERDA: INGRESOS Y FACTURAS
+    # ------------------------------------------
+    with col_izq:
+        # 1. INGRESOS (Solo Actual, sin Presupuesto)
+        st.markdown("<div class='section-badge'>💵 1. INGRESOS (VALOR RECIBIDO)</div>", unsafe_allow_html=True)
+        st.caption("Editable directamente en la tabla.")
+        data_m["ingresos"] = st.data_editor(
+            data_m["ingresos"],
+            column_config={
+                "Check": st.column_config.CheckboxColumn("✓", default=False),
+                "Descripción": st.column_config.TextColumn("Descripción"),
+                "Actual": st.column_config.NumberColumn("Actual ($)", format="$%.2f")
+            },
+            num_rows="dynamic",
+            use_container_width=True,
+            key=f"ing_{sel_year}_{sel_month}"
+        )
 
-    # ==========================================
-    # SECCIÓN 2: FACTURAS (GASTOS FIJOS) - SIN COLUMNA PRESUPUESTO
-    # ==========================================
-    st.markdown("<div class='section-badge'>📑 FACTURAS (GASTOS FIJOS)</div>", unsafe_allow_html=True)
-    st.caption("🔒 Tabla protegida contra edición accidental. Usa los controles inferiores para modificar o añadir.")
-    
-    df_fac_display = data_m["facturas"].copy()
-    if not df_fac_display.empty:
-        df_fac_display["Monto"] = df_fac_display["Monto"].apply(lambda x: f"${x:,.2f}")
-    st.dataframe(df_fac_display, use_container_width=True)
+        st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
 
-    col_fac_add, col_fac_edit = st.columns(2)
-    with col_fac_add:
+        # 2. FACTURAS (GASTOS FIJOS)
+        st.markdown("<div class='section-badge'>📑 2. FACTURAS (GASTOS FIJOS)</div>", unsafe_allow_html=True)
+        st.caption("🔒 Protegida contra edición accidental. Usa los botones inferiores.")
+        df_fac_display = data_m["facturas"].copy()
+        if not df_fac_display.empty:
+            df_fac_display["Monto"] = df_fac_display["Monto"].apply(lambda x: f"${x:,.2f}")
+        st.dataframe(df_fac_display, use_container_width=True)
+
         with st.expander("➕ Añadir Concepto de Factura"):
             with st.form(f"form_add_fac_{sel_year}_{sel_month}"):
-                new_f_desc = st.text_input("Descripción (ej. Renta, Agua, Electricidad)")
+                new_f_desc = st.text_input("Descripción (ej. Renta, Agua, Luz)")
                 new_f_monto = st.number_input("Monto ($)", min_value=0.0, step=10.0, format="%.2f")
                 new_f_tipo = st.selectbox("Clasificación 50/30/20", ["Necesidades", "Deseos"])
-                new_f_fecha = st.text_input("Día / Fecha Límite", value="15")
-                btn_add_f = st.form_submit_button("Agregar Concepto", use_container_width=True)
+                new_f_fecha = st.text_input("Día Límite", value="15")
+                btn_add_f = st.form_submit_button("Agregar Factura", use_container_width=True)
                 
                 if btn_add_f:
                     if new_f_desc.strip():
@@ -589,11 +619,10 @@ if menu_selection == "📅 Presupuesto Mensual":
                     else:
                         st.warning("Escribe una descripción.")
 
-    with col_fac_edit:
         with st.expander("✏️ Lápiz de Edición: Modificar Factura"):
             if not data_m["facturas"].empty:
                 f_options = [f"{idx} - {row['Descripción']}" for idx, row in data_m["facturas"].iterrows()]
-                selected_f_idx = st.selectbox("Seleccione el item a modificar", options=range(len(f_options)), format_func=lambda x: f_options[x], key=f"sel_f_{sel_year}_{sel_month}")
+                selected_f_idx = st.selectbox("Seleccione factura", options=range(len(f_options)), format_func=lambda x: f_options[x], key=f"sel_f_{sel_year}_{sel_month}")
                 
                 current_f = data_m["facturas"].iloc[selected_f_idx]
                 with st.form(f"form_edit_fac_{sel_year}_{sel_month}"):
@@ -604,43 +633,40 @@ if menu_selection == "📅 Presupuesto Mensual":
                     
                     c_save, c_del = st.columns(2)
                     with c_save:
-                        btn_save_f = st.form_submit_button("💾 Guardar Cambios", use_container_width=True)
+                        btn_save_f = st.form_submit_button("💾 Guardar", use_container_width=True)
                     with c_del:
-                        btn_del_f = st.form_submit_button("🗑️ Eliminar Item", use_container_width=True)
+                        btn_del_f = st.form_submit_button("🗑️ Eliminar", use_container_width=True)
                         
                     if btn_save_f:
                         data_m["facturas"].at[selected_f_idx, "Descripción"] = edit_f_desc
                         data_m["facturas"].at[selected_f_idx, "Monto"] = edit_f_monto
                         data_m["facturas"].at[selected_f_idx, "Tipo"] = edit_f_tipo
                         data_m["facturas"].at[selected_f_idx, "Fecha"] = edit_f_fecha
-                        st.success("Item actualizado con éxito.")
+                        st.success("Factura actualizada.")
                         st.rerun()
                         
                     if btn_del_f:
                         data_m["facturas"] = data_m["facturas"].drop(index=selected_f_idx).reset_index(drop=True)
-                        st.success("Item eliminado.")
+                        st.success("Factura eliminada.")
                         st.rerun()
             else:
-                st.info("No hay facturas registradas para editar.")
+                st.info("Sin facturas para editar.")
 
-    st.markdown("---")
+    # ------------------------------------------
+    # COLUMNA DERECHA: GASTOS VARIABLES Y AHORROS
+    # ------------------------------------------
+    with col_der:
+        # 3. GASTOS VARIABLES
+        st.markdown("<div class='section-badge'>🛒 3. GASTOS VARIABLES</div>", unsafe_allow_html=True)
+        st.caption("🔒 Protegida contra edición accidental. Usa los botones inferiores.")
+        df_var_display = data_m["gastos_var"].copy()
+        if not df_var_display.empty:
+            df_var_display["Monto"] = df_var_display["Monto"].apply(lambda x: f"${x:,.2f}")
+        st.dataframe(df_var_display, use_container_width=True)
 
-    # ==========================================
-    # SECCIÓN 3: GASTOS VARIABLES - SIN COLUMNA PRESUPUESTO
-    # ==========================================
-    st.markdown("<div class='section-badge'>🛒 GASTOS VARIABLES</div>", unsafe_allow_html=True)
-    st.caption("🔒 Tabla protegida contra edición accidental. Usa los controles inferiores para modificar.")
-    
-    df_var_display = data_m["gastos_var"].copy()
-    if not df_var_display.empty:
-        df_var_display["Monto"] = df_var_display["Monto"].apply(lambda x: f"${x:,.2f}")
-    st.dataframe(df_var_display, use_container_width=True)
-
-    col_gv_add, col_gv_edit = st.columns(2)
-    with col_gv_add:
         with st.expander("➕ Añadir Categoría de Gasto Variable"):
             with st.form(f"form_add_gv_{sel_year}_{sel_month}"):
-                new_gv_cat = st.text_input("Categoría (ej. Mercado, Combustible, Ocio)")
+                new_gv_cat = st.text_input("Categoría (ej. Mercado, Gasolina, Ocio)")
                 new_gv_monto = st.number_input("Monto ($)", min_value=0.0, step=10.0, format="%.2f")
                 new_gv_tipo = st.selectbox("Clasificación", ["Necesidades", "Deseos"], key=f"new_gv_tipo_{sel_year}_{sel_month}")
                 btn_add_gv = st.form_submit_button("Agregar Categoría", use_container_width=True)
@@ -654,11 +680,10 @@ if menu_selection == "📅 Presupuesto Mensual":
                     else:
                         st.warning("Escribe una categoría.")
 
-    with col_gv_edit:
         with st.expander("✏️ Lápiz de Edición: Modificar Gasto Variable"):
             if not data_m["gastos_var"].empty:
                 gv_options = [f"{idx} - {row['Categoría']}" for idx, row in data_m["gastos_var"].iterrows()]
-                selected_gv_idx = st.selectbox("Seleccione la categoría a modificar", options=range(len(gv_options)), format_func=lambda x: gv_options[x], key=f"sel_gv_{sel_year}_{sel_month}")
+                selected_gv_idx = st.selectbox("Seleccione categoría", options=range(len(gv_options)), format_func=lambda x: gv_options[x], key=f"sel_gv_{sel_year}_{sel_month}")
                 
                 current_gv = data_m["gastos_var"].iloc[selected_gv_idx]
                 with st.form(f"form_edit_gv_{sel_year}_{sel_month}"):
@@ -668,15 +693,15 @@ if menu_selection == "📅 Presupuesto Mensual":
                     
                     c_save, c_del = st.columns(2)
                     with c_save:
-                        btn_save_gv = st.form_submit_button("💾 Guardar Cambios", use_container_width=True)
+                        btn_save_gv = st.form_submit_button("💾 Guardar", use_container_width=True)
                     with c_del:
-                        btn_del_gv = st.form_submit_button("🗑️ Eliminar Categoría", use_container_width=True)
+                        btn_del_gv = st.form_submit_button("🗑️ Eliminar", use_container_width=True)
                         
                     if btn_save_gv:
                         data_m["gastos_var"].at[selected_gv_idx, "Categoría"] = edit_gv_cat
                         data_m["gastos_var"].at[selected_gv_idx, "Monto"] = edit_gv_monto
                         data_m["gastos_var"].at[selected_gv_idx, "Tipo"] = edit_gv_tipo
-                        st.success("Categoría actualizada con éxito.")
+                        st.success("Categoría actualizada.")
                         st.rerun()
                         
                     if btn_del_gv:
@@ -684,26 +709,21 @@ if menu_selection == "📅 Presupuesto Mensual":
                         st.success("Categoría eliminada.")
                         st.rerun()
             else:
-                st.info("No hay gastos variables para editar.")
+                st.info("Sin categorías para editar.")
 
-    st.markdown("---")
+        st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
 
-    # ==========================================
-    # SECCIÓN 4: AHORROS - SIN COLUMNA PRESUPUESTO
-    # ==========================================
-    st.markdown("<div class='section-badge'>🎯 AHORROS E INVERSIÓN (20%)</div>", unsafe_allow_html=True)
-    st.caption("🔒 Tabla protegida contra edición accidental. Usa los controles inferiores.")
-    
-    df_ah_display = data_m["ahorros"].copy()
-    if not df_ah_display.empty:
-        df_ah_display["Monto"] = df_ah_display["Monto"].apply(lambda x: f"${x:,.2f}")
-    st.dataframe(df_ah_display, use_container_width=True)
+        # 4. AHORROS E INVERSIÓN
+        st.markdown("<div class='section-badge'>🎯 4. AHORROS E INVERSIÓN (20%)</div>", unsafe_allow_html=True)
+        st.caption("🔒 Protegida contra edición accidental. Usa los botones inferiores.")
+        df_ah_display = data_m["ahorros"].copy()
+        if not df_ah_display.empty:
+            df_ah_display["Monto"] = df_ah_display["Monto"].apply(lambda x: f"${x:,.2f}")
+        st.dataframe(df_ah_display, use_container_width=True)
 
-    col_ah_add, col_ah_edit = st.columns(2)
-    with col_ah_add:
         with st.expander("➕ Añadir Meta de Ahorro"):
             with st.form(f"form_add_ah_{sel_year}_{sel_month}"):
-                new_ah_con = st.text_input("Concepto / Meta (ej. Fondo de Emergencia, Vacaciones)")
+                new_ah_con = st.text_input("Concepto (ej. Fondo de Emergencia, Inversión)")
                 new_ah_monto = st.number_input("Monto ($)", min_value=0.0, step=10.0, format="%.2f")
                 new_ah_notas = st.text_input("Notas / Plazo", value="Meta personal")
                 btn_add_ah = st.form_submit_button("Agregar Meta", use_container_width=True)
@@ -717,11 +737,10 @@ if menu_selection == "📅 Presupuesto Mensual":
                     else:
                         st.warning("Escribe un concepto.")
 
-    with col_ah_edit:
         with st.expander("✏️ Lápiz de Edición: Modificar Meta de Ahorro"):
             if not data_m["ahorros"].empty:
                 ah_options = [f"{idx} - {row['Concepto']}" for idx, row in data_m["ahorros"].iterrows()]
-                selected_ah_idx = st.selectbox("Seleccione la meta a modificar", options=range(len(ah_options)), format_func=lambda x: ah_options[x], key=f"sel_ah_{sel_year}_{sel_month}")
+                selected_ah_idx = st.selectbox("Seleccione meta", options=range(len(ah_options)), format_func=lambda x: ah_options[x], key=f"sel_ah_{sel_year}_{sel_month}")
                 
                 current_ah = data_m["ahorros"].iloc[selected_ah_idx]
                 with st.form(f"form_edit_ah_{sel_year}_{sel_month}"):
@@ -731,15 +750,15 @@ if menu_selection == "📅 Presupuesto Mensual":
                     
                     c_save, c_del = st.columns(2)
                     with c_save:
-                        btn_save_ah = st.form_submit_button("💾 Guardar Cambios", use_container_width=True)
+                        btn_save_ah = st.form_submit_button("💾 Guardar", use_container_width=True)
                     with c_del:
-                        btn_del_ah = st.form_submit_button("🗑️ Eliminar Meta", use_container_width=True)
+                        btn_del_ah = st.form_submit_button("🗑️ Eliminar", use_container_width=True)
                         
                     if btn_save_ah:
                         data_m["ahorros"].at[selected_ah_idx, "Concepto"] = edit_ah_con
                         data_m["ahorros"].at[selected_ah_idx, "Monto"] = edit_ah_monto
                         data_m["ahorros"].at[selected_ah_idx, "Notas"] = edit_ah_notas
-                        st.success("Meta de ahorro actualizada con éxito.")
+                        st.success("Meta actualizada.")
                         st.rerun()
                         
                     if btn_del_ah:
@@ -747,42 +766,44 @@ if menu_selection == "📅 Presupuesto Mensual":
                         st.success("Meta eliminada.")
                         st.rerun()
             else:
-                st.info("No hay metas de ahorro registradas.")
+                st.info("Sin metas de ahorro registradas.")
 
     st.markdown("---")
 
     # ==========================================
-    # SECCIÓN 5: SEGUIMIENTO DE TRANSACCIONES DIARIAS
+    # SECCIÓN 5: SEGUIMIENTO DE TRANSACCIONES (TAMBIÉN EN 2 COLUMNAS)
     # ==========================================
-    st.markdown("<div class='section-badge'>📝 SEGUIMIENTO DE GASTOS (TRANSACCIONES DIARIAS)</div>", unsafe_allow_html=True)
-    if not data_m["seguimiento"].empty:
-        df_seg_disp = data_m["seguimiento"].copy()
-        df_seg_disp["Monto"] = df_seg_disp["Monto"].apply(lambda x: f"${x:,.2f}")
-        st.dataframe(df_seg_disp, use_container_width=True)
-    else:
-        st.info("Aún no has registrado transacciones diarias este mes.")
+    st.markdown("<div class='section-badge'>📝 5. SEGUIMIENTO DE GASTOS DIARIOS</div>", unsafe_allow_html=True)
+    col_tx_list, col_tx_form = st.columns([1.3, 1])
+    
+    with col_tx_list:
+        if not data_m["seguimiento"].empty:
+            df_seg_disp = data_m["seguimiento"].copy()
+            df_seg_disp["Monto"] = df_seg_disp["Monto"].apply(lambda x: f"${x:,.2f}")
+            st.dataframe(df_seg_disp, use_container_width=True)
+        else:
+            st.info("Aún no has registrado transacciones diarias este mes.")
 
-    with st.expander("➕ Registrar Nueva Transacción"):
+    with col_tx_form:
         with st.form(f"form_add_seg_{sel_year}_{sel_month}"):
-            c_s1, c_s2, c_s3, c_s4 = st.columns([1.5, 1.5, 1, 2])
-            with c_s1:
-                seg_monto = st.number_input("Monto ($)", min_value=0.0, step=5.0, format="%.2f")
-            with c_s2:
-                seg_cat = st.selectbox("Categoría", [
-                    "Mercado y Alimentación", "Transporte / Combustible", "Restaurantes y Salidas", "Entretenimiento y Ocio",
-                    "Salud y Medicamentos", "Mascotas", "Cuidado Personal", "Hogar", "Ropa", "Educación", "Misceláneos"
-                ])
-            with c_s3:
+            st.markdown("**➕ Registrar Nueva Transacción**")
+            seg_monto = st.number_input("Monto ($)", min_value=0.0, step=5.0, format="%.2f")
+            seg_cat = st.selectbox("Categoría", [
+                "Mercado y Alimentación", "Transporte / Combustible", "Restaurantes y Salidas", "Entretenimiento y Ocio",
+                "Salud y Medicamentos", "Mascotas", "Cuidado Personal", "Hogar", "Ropa", "Educación", "Misceláneos"
+            ])
+            c_d1, c_d2 = st.columns(2)
+            with c_d1:
                 seg_dia = st.text_input("Día", value=datetime.now().strftime("%d"))
-            with c_s4:
-                seg_det = st.text_input("Detalle / Comercio", placeholder="Supermercado, Farmacia, etc.")
+            with c_d2:
+                seg_det = st.text_input("Detalle", placeholder="Comercio / Nota")
                 
             btn_add_seg = st.form_submit_button("Registrar Transacción", use_container_width=True)
             if btn_add_seg:
                 if seg_monto > 0:
                     new_tx = {"Monto": seg_monto, "Categoría": seg_cat, "Fecha": seg_dia, "Detalle": seg_det}
                     data_m["seguimiento"] = pd.concat([data_m["seguimiento"], pd.DataFrame([new_tx])], ignore_index=True)
-                    st.success("Transacción registrada correctamente.")
+                    st.success("Transacción registrada.")
                     st.rerun()
                 else:
                     st.warning("El monto debe ser superior a 0.")
@@ -791,12 +812,12 @@ if menu_selection == "📅 Presupuesto Mensual":
 # 7. VISTA: RESUMEN ANUAL CONSOLIDADO (SOLO MESES CREADOS)
 # ==========================================
 elif menu_selection == "📊 Resumen Anual":
-    st.markdown(f'''
+    st.markdown(f"""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — CONSOLIDADO ANUAL {sel_year}</div>
       <div class='main-header-subtitle'>Rendimiento y Ejecución Financiera Mensualizada ({len(months_in_active_year)} meses registrados)</div>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     summary_data = []
     for m in months_in_active_year:
@@ -826,33 +847,33 @@ elif menu_selection == "📊 Resumen Anual":
     
     ca1, ca2, ca3, ca4 = st.columns(4)
     with ca1:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Ingresos Totales {sel_year}</div>
           <div class='kpi-card-value'>${tot_ing:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     with ca2:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Gastos Totales {sel_year}</div>
           <div class='kpi-card-value'>${tot_gas:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     with ca3:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Ahorro Acumulado {sel_year}</div>
           <div class='kpi-card-value'>${tot_aho:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     with ca4:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='restante-card'>
           <div class='restante-card-label'>Superávit Neto Anual</div>
           <div class='restante-card-value'>${tot_flu:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
         
     st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
     
@@ -862,11 +883,17 @@ elif menu_selection == "📊 Resumen Anual":
         fig_an.add_trace(go.Bar(x=df_annual["Mes"], y=df_annual["Gastos"], name="Gastos", marker_color="#D74546"))
         fig_an.add_trace(go.Bar(x=df_annual["Mes"], y=df_annual["Ahorros"], name="Ahorros", marker_color="#00385C"))
         fig_an.update_layout(
+            template="plotly_white",
             title=f"Comportamiento Mes a Mes ({sel_year})",
             barmode='group',
             height=340,
-            paper_bgcolor='#FFFFFF',
-            plot_bgcolor='#FFFFFF'
+            paper_bgcolor="#FFFFFF",
+            plot_bgcolor="#FFFFFF",
+            font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
+            title_font=dict(color="#00385C", size=14),
+            legend=dict(font=dict(color="#1E293B")),
+            xaxis=dict(tickfont=dict(color="#00385C")),
+            yaxis=dict(tickfont=dict(color="#00385C"))
         )
         st.plotly_chart(fig_an, use_container_width=True)
         
@@ -879,12 +906,12 @@ elif menu_selection == "📊 Resumen Anual":
 # 8. VISTA: HORIZONTES FINANCIEROS (3, 5, 10+ AÑOS)
 # ==========================================
 elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
-    st.markdown('''
+    st.markdown("""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — PLANIFICACIÓN PLURIANUAL</div>
       <div class='main-header-subtitle'>Proyección Estratégica: Corto Plazo (3 años), Mediano Plazo (5 años) y Largo Plazo (10+ años)</div>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     tab_cp, tab_mp, tab_lp = st.tabs([
         "⚡ Corto Plazo (3 Años)",
@@ -935,7 +962,14 @@ elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
             
         fig_cp = px.bar(df_cp, x="Periodo", y=["Aporte Acumulado", "Rendimientos / Interés Compuesto"],
                         title="Evolución Patrimonial - Corto Plazo", color_discrete_sequence=["#00385C", "#00ACA9"])
-        fig_cp.update_layout(paper_bgcolor='#FFFFFF', plot_bgcolor='#FFFFFF')
+        fig_cp.update_layout(
+            template="plotly_white",
+            paper_bgcolor="#FFFFFF",
+            plot_bgcolor="#FFFFFF",
+            font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
+            title_font=dict(color="#00385C", size=14),
+            legend=dict(font=dict(color="#1E293B"))
+        )
         st.plotly_chart(fig_cp, use_container_width=True)
         st.dataframe(df_cp.style.format({"Aporte Acumulado": "${:,.2f}", "Rendimientos / Interés Compuesto": "${:,.2f}", "Patrimonio Total Estimado": "${:,.2f}"}), use_container_width=True)
 
@@ -953,7 +987,13 @@ elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
             st.metric("Capital Acumulado al Año 5", f"${df_mp['Patrimonio Total Estimado'].iloc[-1]:,.2f}")
             
         fig_mp = px.area(df_mp, x="Periodo", y="Patrimonio Total Estimado", title="Curva de Crecimiento a 5 Años", color_discrete_sequence=["#00ACA9"])
-        fig_mp.update_layout(paper_bgcolor='#FFFFFF', plot_bgcolor='#FFFFFF')
+        fig_mp.update_layout(
+            template="plotly_white",
+            paper_bgcolor="#FFFFFF",
+            plot_bgcolor="#FFFFFF",
+            font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
+            title_font=dict(color="#00385C", size=14)
+        )
         st.plotly_chart(fig_mp, use_container_width=True)
         st.dataframe(df_mp.style.format({"Aporte Acumulado": "${:,.2f}", "Rendimientos / Interés Compuesto": "${:,.2f}", "Patrimonio Total Estimado": "${:,.2f}"}), use_container_width=True)
 
@@ -975,7 +1015,16 @@ elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
         fig_lp = go.Figure()
         fig_lp.add_trace(go.Scatter(x=df_lp["Año"], y=df_lp["Aporte Acumulado"], name="Aporte Acumulado", fill='tozeroy', line=dict(color='#00385C')))
         fig_lp.add_trace(go.Scatter(x=df_lp["Año"], y=df_lp["Patrimonio Total Estimado"], name="Patrimonio Total con Interés Compuesto", fill='tonexty', line=dict(color='#00ACA9')))
-        fig_lp.update_layout(title="Efecto Bola de Nieve a Largo Plazo", height=380, paper_bgcolor='#FFFFFF', plot_bgcolor='#FFFFFF')
+        fig_lp.update_layout(
+            template="plotly_white",
+            title="Efecto Bola de Nieve a Largo Plazo",
+            height=380,
+            paper_bgcolor="#FFFFFF",
+            plot_bgcolor="#FFFFFF",
+            font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
+            title_font=dict(color="#00385C", size=14),
+            legend=dict(font=dict(color="#1E293B"))
+        )
         st.plotly_chart(fig_lp, use_container_width=True)
         st.dataframe(df_lp.style.format({"Aporte Acumulado": "${:,.2f}", "Rendimientos / Interés Compuesto": "${:,.2f}", "Patrimonio Total Estimado": "${:,.2f}"}), use_container_width=True)
 
@@ -983,12 +1032,12 @@ elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
 # 9. PANEL DE ADMINISTRACIÓN Y SUPERUSUARIO
 # ==========================================
 elif menu_selection == "👑 Panel de Administración" and is_admin:
-    st.markdown('''
+    st.markdown("""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — CENTRO DE CONTROL SUPERUSUARIO</div>
       <div class='main-header-subtitle'>Gestión Total de Usuarios, Roles, Creación, Edición y Auditoría Forense</div>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     t_list, t_create, t_edit, t_audit = st.tabs([
         "👥 Listado de Usuarios",
