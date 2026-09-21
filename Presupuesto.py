@@ -11,6 +11,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 import io
+import json
+import os
 
 # ==========================================
 # 1. CONFIGURACIÓN DE PÁGINA
@@ -22,12 +24,194 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Inicializar tema de la app en session_state si no existe
+# Inicializar tema de la app
 if "app_theme" not in st.session_state:
     st.session_state.app_theme = "System"
 
 # ==========================================
-# 2. ESTILOS CSS ADAPTABLES (SYSTEM, LIGHT, DARK)
+# 2. PERSISTENCIA EN ARCHIVOS LOCALES (COMPARTIDO ENTRE MÓVIL Y WEB)
+# ==========================================
+USERS_FILE = "users_db.json"
+FINANCES_FILE = "finances_db.json"
+SMTP_FILE = "smtp_db.json"
+AUDIT_FILE = "audit_db.json"
+
+def hash_password(password: str, salt: str = None) -> tuple:
+    if salt is None:
+        salt = secrets.token_hex(16)
+    key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), bytes.fromhex(salt), 100000)
+    return key.hex(), salt
+
+def verify_password(stored_hash: str, salt: str, password_attempt: str) -> bool:
+    attempt_hash = hashlib.pbkdf2_hmac('sha256', password_attempt.encode('utf-8'), bytes.fromhex(salt), 100000).hex()
+    return hmac.compare_digest(stored_hash, attempt_hash)
+
+def load_json_file(filepath, default_val):
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return default_val
+    return default_val
+
+def save_json_file(filepath, data):
+    try:
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
+
+def get_all_users():
+    default_admin_hash, default_admin_salt = hash_password("admin123")
+    default_user_hash, default_user_salt = hash_password("123456")
+    default_users = {
+        "admin@optibudget.com": {
+            "name": "Super Administrador",
+            "role": "Superusuario",
+            "hash": default_admin_hash,
+            "salt": default_admin_salt,
+            "is_active": True,
+            "failed_attempts": 0,
+            "locked_until": None,
+            "created_at": "2026-09-21 00:00"
+        },
+        "usuario@demo.com": {
+            "name": "Usuario Demo",
+            "role": "Usuario",
+            "hash": default_user_hash,
+            "salt": default_user_salt,
+            "is_active": True,
+            "failed_attempts": 0,
+            "locked_until": None,
+            "created_at": "2026-09-21 00:00"
+        }
+    }
+    users = load_json_file(USERS_FILE, None)
+    if users is None:
+        save_json_file(USERS_FILE, default_users)
+        return default_users
+    return users
+
+def save_all_users(users_dict):
+    save_json_file(USERS_FILE, users_dict)
+
+def get_smtp_config():
+    default_smtp = {
+        "server": "smtp.gmail.com",
+        "port": 587,
+        "sender": "",
+        "password": "",
+        "recipient": "admin@optibudget.com",
+        "active": False
+    }
+    return load_json_file(SMTP_FILE, default_smtp)
+
+def save_smtp_config(smtp_dict):
+    save_json_file(SMTP_FILE, smtp_dict)
+
+def get_audit_log():
+    return load_json_file(AUDIT_FILE, [])
+
+def append_audit_log(entry):
+    logs = get_audit_log()
+    logs.append(entry)
+    save_json_file(AUDIT_FILE, logs)
+
+CHRONO_MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                 "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+
+def create_initial_example_month():
+    return {
+        "ingresos": [
+            {"Check": False, "Descripción": "Salario / Ingreso Principal", "Actual": 0.0}
+        ],
+        "facturas": [
+            {"Descripción": "Renta / Vivienda", "Monto": 0.0, "Tipo": "Necesidades", "Fecha": "01"}
+        ],
+        "gastos_var": [
+            {"Categoría": "Mercado / Alimentación", "Monto": 0.0, "Tipo": "Necesidades"}
+        ],
+        "ahorros": [
+            {"Concepto": "Fondo de Emergencia", "Monto": 0.0, "Notas": "Meta inicial de ahorro"}
+        ],
+        "seguimiento": []
+    }
+
+def get_all_finances():
+    return load_json_file(FINANCES_FILE, {})
+
+def save_all_finances(finances_dict):
+    save_json_file(FINANCES_FILE, finances_dict)
+
+def init_user_finances(email):
+    current_year = str(datetime.now().year)
+    finances = get_all_finances()
+    if email not in finances:
+        finances[email] = {
+            current_year: {
+                "Enero": create_initial_example_month()
+            }
+        }
+        save_all_finances(finances)
+    elif current_year not in finances[email]:
+        finances[email][current_year] = {
+            "Enero": create_initial_example_month()
+        }
+        save_all_finances(finances)
+
+def send_security_alert(target_email, event_type, details):
+    log_entry = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "target_email": target_email,
+        "event_type": event_type,
+        "details": details,
+        "correo_enviado": "No configurado"
+    }
+    
+    cfg = get_smtp_config()
+    if cfg["active"] and cfg["sender"] and cfg["password"] and cfg["recipient"]:
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = f"🚨 [NOTIFICACIÓN] {event_type} - OptiBudget Pro"
+            msg["From"] = cfg["sender"]
+            msg["To"] = cfg["recipient"]
+            
+            html = f"""
+            <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #CBD5E1; border-radius: 8px;">
+              <h2 style="color: #00385C; margin-top: 0;">💼 OptiBudget Pro - Notificación de Seguridad</h2>
+              <p>Se ha registrado el siguiente evento en la plataforma:</p>
+              <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                <tr style="background: #F8FAFC;"><td style="padding: 8px; font-weight: bold;">Evento:</td><td style="padding: 8px; color: #00ACA9;">{event_type}</td></tr>
+                <tr><td style="padding: 8px; font-weight: bold;">Fecha y Hora:</td><td style="padding: 8px;">{log_entry['timestamp']}</td></tr>
+                <tr style="background: #F8FAFC;"><td style="padding: 8px; font-weight: bold;">Cuenta Relacionada:</td><td style="padding: 8px;">{target_email}</td></tr>
+                <tr><td style="padding: 8px; font-weight: bold;">Detalles:</td><td style="padding: 8px;">{details}</td></tr>
+              </table>
+              <hr style="border: 0; border-top: 1px solid #CBD5E1;">
+              <p style="font-size: 0.85rem; color: #64748B;">Notificación enviada automáticamente a {cfg['recipient']}.</p>
+            </div>
+            """
+            msg.attach(MIMEText(html, "html"))
+            
+            server = smtplib.SMTP(cfg["server"], cfg["port"], timeout=6)
+            server.starttls()
+            server.login(cfg["sender"], cfg["password"])
+            server.sendmail(cfg["sender"], cfg["recipient"], msg.as_string())
+            server.quit()
+            log_entry["correo_enviado"] = f"Enviado a {cfg['recipient']}"
+        except Exception as e:
+            log_entry["correo_enviado"] = f"Error: {str(e)}"
+            
+    append_audit_log(log_entry)
+
+# Inicializar sesión actual
+if "current_user" not in st.session_state:
+    st.session_state.current_user = None
+if "active_module" not in st.session_state:
+    st.session_state.active_module = "📅 Presupuesto Mensual"
+
+# ==========================================
+# 3. ESTILOS CSS ADAPTABLES (SYSTEM, LIGHT, DARK)
 # ==========================================
 if st.session_state.app_theme == "Dark":
     theme_css = """
@@ -45,6 +229,9 @@ if st.session_state.app_theme == "Dark":
       --restante-bg: #0F2922;
       --restante-border: #00ACA9;
       --restante-text: #2DD4BF;
+      --notif-bg: #1E293B;
+      --notif-border: #00ACA9;
+      --notif-text: #F8FAFC;
     }
     html, body, .stApp, [data-testid="stAppViewContainer"], .main {
       background-color: #0F172A !important;
@@ -73,6 +260,9 @@ elif st.session_state.app_theme == "Light":
       --restante-bg: #F0FDF4;
       --restante-border: #00ACA9;
       --restante-text: #00ACA9;
+      --notif-bg: #E5F6FF;
+      --notif-border: #00385C;
+      --notif-text: #00385C;
     }
     html, body, .stApp, [data-testid="stAppViewContainer"], .main {
       background-color: #FFFFFF !important;
@@ -100,6 +290,9 @@ else:
       --restante-bg: rgba(0, 172, 169, 0.08);
       --restante-border: #00ACA9;
       --restante-text: #00ACA9;
+      --notif-bg: #E5F6FF;
+      --notif-border: #00385C;
+      --notif-text: #00385C;
     }
     """
     chart_template = "none"
@@ -285,181 +478,30 @@ html, body, .stApp {{
   margin-left: 4px;
 }}
 
+/* NOTIFICACIONES CON CONTRASTE AZUL GARANTIZADO */
 .notif-box {{
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
+  background-color: var(--notif-bg) !important;
+  border: 1px solid var(--notif-border) !important;
+  border-left: 4px solid var(--notif-border) !important;
+  color: var(--notif-text) !important;
   padding: 10px 14px;
   border-radius: 8px;
   margin-bottom: 8px;
-  border-left: 4px solid #00ACA9;
+  font-weight: 600;
+}}
+
+.notif-box * {{
+  color: var(--notif-text) !important;
 }}
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. SEGURIDAD, ESTADO Y USUARIOS
+# 4. PANTALLA DE ACCESO (LOGIN & REGISTRO PERSISTENTE)
 # ==========================================
-def hash_password(password: str, salt: str = None) -> tuple:
-    if salt is None:
-        salt = secrets.token_hex(16)
-    key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), bytes.fromhex(salt), 100000)
-    return key.hex(), salt
+all_users = get_all_users()
 
-def verify_password(stored_hash: str, salt: str, password_attempt: str) -> bool:
-    attempt_hash = hashlib.pbkdf2_hmac('sha256', password_attempt.encode('utf-8'), bytes.fromhex(salt), 100000).hex()
-    return hmac.compare_digest(stored_hash, attempt_hash)
-
-CHRONO_MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-                 "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-
-def create_initial_example_month():
-    return {
-        "ingresos": pd.DataFrame([
-            {"Check": False, "Descripción": "Salario / Ingreso Principal", "Actual": 0.0}
-        ]),
-        "facturas": pd.DataFrame([
-            {"Descripción": "Renta / Vivienda", "Monto": 0.0, "Tipo": "Necesidades", "Fecha": "01"}
-        ]),
-        "gastos_var": pd.DataFrame([
-            {"Categoría": "Mercado / Alimentación", "Monto": 0.0, "Tipo": "Necesidades"}
-        ]),
-        "ahorros": pd.DataFrame([
-            {"Concepto": "Fondo de Emergencia", "Monto": 0.0, "Notas": "Meta inicial de ahorro"}
-        ]),
-        "seguimiento": pd.DataFrame(columns=["Monto", "Categoría", "Fecha", "Detalle"])
-    }
-
-def clone_structure_from_month(source_month_data):
-    new_ing = source_month_data["ingresos"].copy()
-    if "Presupuesto" in new_ing.columns:
-        new_ing = new_ing.drop(columns=["Presupuesto"])
-    new_ing["Check"] = False
-    new_ing["Actual"] = 0.0
-    
-    new_fac = source_month_data["facturas"].copy()
-    new_fac["Monto"] = 0.0
-    
-    new_gv = source_month_data["gastos_var"].copy()
-    new_gv["Monto"] = 0.0
-    
-    new_ah = source_month_data["ahorros"].copy()
-    new_ah["Monto"] = 0.0
-    
-    new_seg = pd.DataFrame(columns=["Monto", "Categoría", "Fecha", "Detalle"])
-    
-    return {
-        "ingresos": new_ing,
-        "facturas": new_fac,
-        "gastos_var": new_gv,
-        "ahorros": new_ah,
-        "seguimiento": new_seg
-    }
-
-DATA_VERSION = "v9_full_workflow_all_users"
-
-def init_system_state():
-    if "users" not in st.session_state:
-        admin_hash, admin_salt = hash_password("admin123")
-        user_hash, user_salt = hash_password("123456")
-        st.session_state.users = {
-            "admin@optibudget.com": {
-                "name": "Super Administrador",
-                "role": "Superusuario",
-                "hash": admin_hash,
-                "salt": admin_salt,
-                "is_active": True,
-                "failed_attempts": 0,
-                "locked_until": None,
-                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M")
-            },
-            "usuario@demo.com": {
-                "name": "Usuario Demo",
-                "role": "Usuario",
-                "hash": user_hash,
-                "salt": user_salt,
-                "is_active": True,
-                "failed_attempts": 0,
-                "locked_until": None,
-                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M")
-            }
-        }
-    if "finances" not in st.session_state:
-        st.session_state.finances = {}
-    if "current_user" not in st.session_state:
-        st.session_state.current_user = None
-    if "active_module" not in st.session_state:
-        st.session_state.active_module = "📅 Presupuesto Mensual"
-    if "audit_log" not in st.session_state:
-        st.session_state.audit_log = []
-    if "smtp_config" not in st.session_state:
-        st.session_state.smtp_config = {
-            "server": "smtp.gmail.com",
-            "port": 587,
-            "sender": "",
-            "password": "",
-            "recipient": "admin@optibudget.com",
-            "active": False
-        }
-
-init_system_state()
-
-def init_user_finances(email):
-    current_year = datetime.now().year
-    if email not in st.session_state.finances:
-        st.session_state.finances[email] = {
-            current_year: {
-                "Enero": create_initial_example_month()
-            }
-        }
-
-def send_security_alert(target_email, event_type, details):
-    log_entry = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "target_email": target_email,
-        "event_type": event_type,
-        "details": details,
-        "correo_enviado": "No configurado"
-    }
-    
-    cfg = st.session_state.smtp_config
-    if cfg["active"] and cfg["sender"] and cfg["password"] and cfg["recipient"]:
-        try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = f"🚨 [NOTIFICACIÓN] {event_type} - OptiBudget Pro"
-            msg["From"] = cfg["sender"]
-            msg["To"] = cfg["recipient"]
-            
-            html = f"""
-            <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #CBD5E1; border-radius: 8px;">
-              <h2 style="color: #00385C; margin-top: 0;">💼 OptiBudget Pro - Notificación del Sistema</h2>
-              <p>Se ha registrado el siguiente evento en la plataforma:</p>
-              <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-                <tr style="background: #F8FAFC;"><td style="padding: 8px; font-weight: bold;">Evento:</td><td style="padding: 8px; color: #00ACA9;">{event_type}</td></tr>
-                <tr><td style="padding: 8px; font-weight: bold;">Fecha y Hora:</td><td style="padding: 8px;">{log_entry['timestamp']}</td></tr>
-                <tr style="background: #F8FAFC;"><td style="padding: 8px; font-weight: bold;">Cuenta Relacionada:</td><td style="padding: 8px;">{target_email}</td></tr>
-                <tr><td style="padding: 8px; font-weight: bold;">Detalles:</td><td style="padding: 8px;">{details}</td></tr>
-              </table>
-              <hr style="border: 0; border-top: 1px solid #CBD5E1;">
-              <p style="font-size: 0.85rem; color: #64748B;">Notificación enviada a la dirección administrativa configurada.</p>
-            </div>
-            """
-            msg.attach(MIMEText(html, "html"))
-            
-            server = smtplib.SMTP(cfg["server"], cfg["port"], timeout=6)
-            server.starttls()
-            server.login(cfg["sender"], cfg["password"])
-            server.sendmail(cfg["sender"], cfg["recipient"], msg.as_string())
-            server.quit()
-            log_entry["correo_enviado"] = f"Enviado a {cfg['recipient']}"
-        except Exception as e:
-            log_entry["correo_enviado"] = f"Error: {str(e)}"
-            
-    st.session_state.audit_log.append(log_entry)
-
-# ==========================================
-# 4. PANTALLA DE ACCESO (LOGIN & REGISTRO)
-# ==========================================
-if st.session_state.current_user is None:
+if st.session_state.current_user is None or st.session_state.current_user not in all_users:
     st.markdown("""
     <div style='text-align: center; padding: 2.5rem 0 1rem 0;'>
       <h1 style='color: #00385C !important; font-size: 2.4rem; font-weight: 800; margin: 0;'>💼 OptiBudget Pro</h1>
@@ -478,33 +520,42 @@ if st.session_state.current_user is None:
                 btn_login = st.form_submit_button("Ingresar a OptiBudget Pro", use_container_width=True)
                 
                 if btn_login:
-                    if login_email in st.session_state.users:
-                        u_data = st.session_state.users[login_email]
+                    all_users_fresh = get_all_users()
+                    if login_email in all_users_fresh:
+                        u_data = all_users_fresh[login_email]
                         
                         # 1. VALIDACIÓN: USUARIO ACTIVO/APROBADO POR EL ADMIN
                         if not u_data.get("is_active", True):
                             st.warning("⏳ Tu cuenta ha sido registrada pero está pendiente de aprobación por el Administrador. No puedes ingresar hasta que sea validada.")
-                        elif u_data["locked_until"] and datetime.now() < u_data["locked_until"]:
-                            st.error(f"⛔ Cuenta bloqueada por seguridad hasta {u_data['locked_until'].strftime('%H:%M:%S')}.")
+                        elif u_data.get("locked_until") and datetime.now() < datetime.strptime(u_data["locked_until"], "%Y-%m-%d %H:%M:%S"):
+                            st.error(f"⛔ Cuenta bloqueada por seguridad hasta {u_data['locked_until']}.")
                         else:
                             if verify_password(u_data["hash"], u_data["salt"], login_pass):
                                 u_data["failed_attempts"] = 0
                                 u_data["locked_until"] = None
+                                all_users_fresh[login_email] = u_data
+                                save_all_users(all_users_fresh)
+                                
                                 st.session_state.current_user = login_email
                                 init_user_finances(login_email)
                                 st.success("Acceso autorizado con éxito.")
                                 st.rerun()
                             else:
-                                u_data["failed_attempts"] += 1
+                                u_data["failed_attempts"] = u_data.get("failed_attempts", 0) + 1
                                 if u_data["failed_attempts"] >= 3:
-                                    u_data["locked_until"] = datetime.now() + timedelta(minutes=15)
+                                    lock_time = datetime.now() + timedelta(minutes=15)
+                                    u_data["locked_until"] = lock_time.strftime("%Y-%m-%d %H:%M:%S")
+                                    all_users_fresh[login_email] = u_data
+                                    save_all_users(all_users_fresh)
                                     send_security_alert(login_email, "INTROMISIÓN DETECTADA / BLOQUEO", "3 intentos fallidos consecutivos.")
                                     st.error("⛔ Demasiados intentos fallidos. Cuenta bloqueada por 15 minutos.")
                                 else:
+                                    all_users_fresh[login_email] = u_data
+                                    save_all_users(all_users_fresh)
                                     send_security_alert(login_email, "INTENTO FALLIDO", f"Intento #{u_data['failed_attempts']}")
                                     st.warning(f"Credenciales incorrectas. Intentos restantes: {3 - u_data['failed_attempts']}.")
                     else:
-                        st.error("Credenciales inválidas.")
+                        st.error("Credenciales inválidas. Si te registraste en móvil, asegúrate de haber usado el correo exacto.")
 
         with tab_reg:
             with st.form("form_register"):
@@ -515,16 +566,18 @@ if st.session_state.current_user is None:
                 btn_reg = st.form_submit_button("Crear Cuenta", use_container_width=True)
                 
                 if btn_reg:
+                    all_users_fresh = get_all_users()
                     if not reg_name or not reg_email or not reg_pass:
                         st.warning("Por favor completa todos los campos requeridos.")
                     elif reg_pass != reg_pass_conf:
                         st.error("Las contraseñas no coinciden.")
-                    elif reg_email in st.session_state.users:
+                    elif reg_email in all_users_fresh:
                         st.error("El correo ya se encuentra registrado.")
                     else:
                         phash, psalt = hash_password(reg_pass)
-                        st.session_state.users[reg_email] = {
-                            "name": reg_name,
+                        # Usuario nuevo inicia INACTIVO (pendiente de validación)
+                        all_users_fresh[reg_email] = {
+                            "name": reg_name.strip(),
                             "role": "Usuario",
                             "hash": phash,
                             "salt": psalt,
@@ -533,6 +586,7 @@ if st.session_state.current_user is None:
                             "locked_until": None,
                             "created_at": datetime.now().strftime("%Y-%m-%d %H:%M")
                         }
+                        save_all_users(all_users_fresh)
                         init_user_finances(reg_email)
                         
                         send_security_alert(
@@ -540,34 +594,36 @@ if st.session_state.current_user is None:
                             "NUEVO USUARIO PENDIENTE DE APROBACIÓN", 
                             f"El usuario {reg_name} ({reg_email}) se ha registrado. Requiere activación en el panel de administración."
                         )
-                        st.success("✅ Cuenta registrada exitosamente. Se ha enviado un correo al Administrador. Podrás ingresar tan pronto active tu cuenta.")
+                        st.success("✅ Cuenta registrada exitosamente. Guardada en el servidor y correo enviado al Administrador. Podrás ingresar tan pronto sea aprobada.")
     st.stop()
 
 # ==========================================
 # 5. MENÚ LATERAL ESTILO SAP BYDESIGN Y NOTIFICACIONES
 # ==========================================
 current_email = st.session_state.current_user
-user_info = st.session_state.users[current_email]
+all_users = get_all_users()
+user_info = all_users[current_email]
 is_admin = user_info["role"] == "Superusuario"
 
 init_user_finances(current_email)
-user_fin = st.session_state.finances[current_email]
+all_finances = get_all_finances()
+user_fin = all_finances.get(current_email, {})
 
 # CÁLCULO DE TAREAS Y MENSAJES PENDIENTES PARA LA CAMPANA 🔔
 notifications = []
 now = datetime.now()
-current_sys_year = now.year
+current_sys_year = str(now.year)
 current_sys_month = CHRONO_MONTHS[now.month - 1]
 
 if is_admin:
-    pending_users = [mail for mail, u in st.session_state.users.items() if not u.get("is_active", False)]
+    pending_users = [mail for mail, u in all_users.items() if not u.get("is_active", False)]
     if pending_users:
-        notifications.append(f"👥 Hay **{len(pending_users)}** usuario(s) pendiente(s) de aprobación para ingresar.")
+        notifications.append(f"Hay **{len(pending_users)}** usuario(s) nuevo(s) pendiente(s) de aprobación en el Panel de Administración.")
 
 if current_sys_year not in user_fin:
-    notifications.append(f"📅 Estamos en el año **{current_sys_year}** y aún no has creado este año fiscal.")
+    notifications.append(f"Estamos en el año **{current_sys_year}** y aún no has creado este año fiscal.")
 elif current_sys_month not in user_fin[current_sys_year]:
-    notifications.append(f"🗓️ Ha comenzado **{current_sys_month} {current_sys_year}** y aún no has creado este mes.")
+    notifications.append(f"Ha comenzado **{current_sys_month} {current_sys_year}** y aún no has creado este mes.")
 
 with st.sidebar:
     st.markdown("""
@@ -580,7 +636,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # SELECTOR DE TEMA: System, Light, Dark (SIN FORZAR FONDO)
+    # SELECTOR DE TEMA: System, Light, Dark
     theme_choice = st.selectbox(
         "🎨 Tema Visual",
         ["System", "Light", "Dark"],
@@ -637,6 +693,12 @@ with st.sidebar:
     st.markdown("<div class='sap-work-center-header'>Período Fiscal & Parámetros</div>", unsafe_allow_html=True)
 
     created_years = sorted(list(user_fin.keys()))
+    if not created_years:
+        created_years = [current_sys_year]
+        user_fin[current_sys_year] = {"Enero": create_initial_example_month()}
+        all_finances[current_email] = user_fin
+        save_all_finances(all_finances)
+
     if "current_sel_year" not in st.session_state or st.session_state.current_sel_year not in created_years:
         st.session_state.current_sel_year = created_years[-1]
     
@@ -645,24 +707,29 @@ with st.sidebar:
 
     with st.expander("➕ Crear Nuevo Año"):
         with st.form("form_create_year"):
-            next_suggested_year = max(created_years) + 1 if created_years else current_sys_year
+            next_suggested_year = int(max(created_years)) + 1 if created_years else int(current_sys_year)
             new_year_input = st.number_input("Año a crear", min_value=2020, max_value=2099, value=next_suggested_year, step=1)
             btn_create_year = st.form_submit_button("Crear Año", use_container_width=True)
             
             if btn_create_year:
-                if new_year_input in user_fin:
-                    st.warning(f"El año {new_year_input} ya existe.")
+                s_year = str(new_year_input)
+                if s_year in user_fin:
+                    st.warning(f"El año {s_year} ya existe.")
                 else:
-                    user_fin[new_year_input] = {
+                    user_fin[s_year] = {
                         "Enero": create_initial_example_month()
                     }
-                    st.session_state.current_sel_year = new_year_input
-                    st.success(f"¡Año {new_year_input} creado!")
+                    all_finances[current_email] = user_fin
+                    save_all_finances(all_finances)
+                    st.session_state.current_sel_year = s_year
+                    st.success(f"¡Año {s_year} creado!")
                     st.rerun()
 
-    months_in_active_year = [m for m in CHRONO_MONTHS if m in user_fin[sel_year]]
+    months_in_active_year = [m for m in CHRONO_MONTHS if m in user_fin.get(sel_year, {})]
     if not months_in_active_year:
-        user_fin[sel_year]["Enero"] = create_initial_example_month()
+        user_fin[sel_year] = {"Enero": create_initial_example_month()}
+        all_finances[current_email] = user_fin
+        save_all_finances(all_finances)
         months_in_active_year = ["Enero"]
 
     if "current_sel_month" not in st.session_state or st.session_state.current_sel_month not in months_in_active_year:
@@ -682,7 +749,16 @@ with st.sidebar:
                 
                 if btn_create_month:
                     source_data = user_fin[sel_year][clone_from]
-                    user_fin[sel_year][next_month_to_create] = clone_structure_from_month(source_data)
+                    cloned_data = {
+                        "ingresos": [dict(r, Check=False, Actual=0.0) for r in source_data.get("ingresos", [])],
+                        "facturas": [dict(r, Monto=0.0) for r in source_data.get("facturas", [])],
+                        "gastos_var": [dict(r, Monto=0.0) for r in source_data.get("gastos_var", [])],
+                        "ahorros": [dict(r, Monto=0.0) for r in source_data.get("ahorros", [])],
+                        "seguimiento": []
+                    }
+                    user_fin[sel_year][next_month_to_create] = cloned_data
+                    all_finances[current_email] = user_fin
+                    save_all_finances(all_finances)
                     st.session_state.current_sel_month = next_month_to_create
                     st.success(f"¡Mes {next_month_to_create} creado!")
                     st.rerun()
@@ -698,30 +774,40 @@ with st.sidebar:
 # 6. VISTA: PRESUPUESTO MENSUAL (REACTIVO EN TIEMPO REAL)
 # ==========================================
 if menu_selection == "📅 Presupuesto Mensual":
-    data_m = user_fin[sel_year][sel_month]
+    raw_month = user_fin[sel_year][sel_month]
     
-    if "Presupuesto" in data_m["ingresos"].columns:
-        data_m["ingresos"] = data_m["ingresos"].drop(columns=["Presupuesto"])
-    
-    # RECALCULO REACTIVO TOTAL
-    total_ingreso_act = float(data_m["ingresos"]["Actual"].sum()) if not data_m["ingresos"].empty else 0.0
-    total_facturas = float(data_m["facturas"]["Monto"].sum()) if not data_m["facturas"].empty else 0.0
-    total_var = float(data_m["gastos_var"]["Monto"].sum()) if not data_m["gastos_var"].empty else 0.0
-    total_seg = float(data_m["seguimiento"]["Monto"].sum()) if not data_m["seguimiento"].empty else 0.0
-    total_ahorro = float(data_m["ahorros"]["Monto"].sum()) if not data_m["ahorros"].empty else 0.0
+    df_ing = pd.DataFrame(raw_month.get("ingresos", []))
+    if "Presupuesto" in df_ing.columns:
+        df_ing = df_ing.drop(columns=["Presupuesto"])
+    if df_ing.empty:
+        df_ing = pd.DataFrame([{"Check": False, "Descripción": "Salario Principal", "Actual": 0.0}])
+        
+    df_fac = pd.DataFrame(raw_month.get("facturas", []))
+    df_var = pd.DataFrame(raw_month.get("gastos_var", []))
+    df_ah = pd.DataFrame(raw_month.get("ahorros", []))
+    df_seg = pd.DataFrame(raw_month.get("seguimiento", []))
+    if df_seg.empty:
+        df_seg = pd.DataFrame(columns=["Monto", "Categoría", "Fecha", "Detalle"])
+        
+    # CÁLCULOS REACTIVOS TOTALES
+    total_ingreso_act = float(df_ing["Actual"].sum()) if not df_ing.empty and "Actual" in df_ing.columns else 0.0
+    total_facturas = float(df_fac["Monto"].sum()) if not df_fac.empty and "Monto" in df_fac.columns else 0.0
+    total_var = float(df_var["Monto"].sum()) if not df_var.empty and "Monto" in df_var.columns else 0.0
+    total_seg = float(df_seg["Monto"].sum()) if not df_seg.empty and "Monto" in df_seg.columns else 0.0
+    total_ahorro = float(df_ah["Monto"].sum()) if not df_ah.empty and "Monto" in df_ah.columns else 0.0
     
     total_gastado = total_facturas + total_var + total_seg
     dinero_restante = total_ingreso_act - total_gastado - total_ahorro
     
-    fac_nec = data_m["facturas"][data_m["facturas"]["Tipo"] == "Necesidades"]["Monto"].sum() if not data_m["facturas"].empty else 0.0
-    var_nec = data_m["gastos_var"][data_m["gastos_var"]["Tipo"] == "Necesidades"]["Monto"].sum() if not data_m["gastos_var"].empty else 0.0
+    fac_nec = df_fac[df_fac["Tipo"] == "Necesidades"]["Monto"].sum() if (not df_fac.empty and "Tipo" in df_fac.columns and "Monto" in df_fac.columns) else 0.0
+    var_nec = df_var[df_var["Tipo"] == "Necesidades"]["Monto"].sum() if (not df_var.empty and "Tipo" in df_var.columns and "Monto" in df_var.columns) else 0.0
     nec_total = fac_nec + var_nec
     
-    fac_des = data_m["facturas"][data_m["facturas"]["Tipo"] == "Deseos"]["Monto"].sum() if not data_m["facturas"].empty else 0.0
-    var_des = data_m["gastos_var"][data_m["gastos_var"]["Tipo"] == "Deseos"]["Monto"].sum() if not data_m["gastos_var"].empty else 0.0
+    fac_des = df_fac[df_fac["Tipo"] == "Deseos"]["Monto"].sum() if (not df_fac.empty and "Tipo" in df_fac.columns and "Monto" in df_fac.columns) else 0.0
+    var_des = df_var[df_var["Tipo"] == "Deseos"]["Monto"].sum() if (not df_var.empty and "Tipo" in df_var.columns and "Monto" in df_var.columns) else 0.0
     des_total = fac_des + var_des
     
-    # TÍTULO DE PÁGINA TOTALMENTE CENTRADO
+    # BANNER CON TÍTULO TOTALMENTE CENTRADO
     st.markdown(f"""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — {sel_month.upper()} {sel_year}</div>
@@ -762,7 +848,7 @@ if menu_selection == "📅 Presupuesto Mensual":
         
     st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
     
-    # GRÁFICOS REACTIVOS (TÍTULOS CENTRADOS Y TEMPLATE ADAPTABLE)
+    # GRÁFICOS REACTIVOS
     g_col1, g_col2 = st.columns(2)
     with g_col1:
         df_pie = pd.DataFrame({
@@ -810,11 +896,11 @@ if menu_selection == "📅 Presupuesto Mensual":
     col_izq, col_der = st.columns(2)
 
     with col_izq:
-        # 1. INGRESOS (Solo Actual)
+        # 1. INGRESOS
         st.markdown("<div class='section-badge'>💵 1. INGRESOS (VALOR RECIBIDO)</div>", unsafe_allow_html=True)
-        st.caption("Editable directamente en la tabla. Se recalcula en tiempo real.")
+        st.caption("Editable directamente en la tabla. Se guarda y recalcula en tiempo real.")
         edited_ing = st.data_editor(
-            data_m["ingresos"],
+            df_ing,
             column_config={
                 "Check": st.column_config.CheckboxColumn("✓", default=False),
                 "Descripción": st.column_config.TextColumn("Descripción"),
@@ -824,8 +910,11 @@ if menu_selection == "📅 Presupuesto Mensual":
             use_container_width=True,
             key=f"ing_{sel_year}_{sel_month}"
         )
-        if not edited_ing.equals(data_m["ingresos"]):
-            data_m["ingresos"] = edited_ing
+        if not edited_ing.equals(df_ing):
+            raw_month["ingresos"] = edited_ing.to_dict(orient="records")
+            user_fin[sel_year][sel_month] = raw_month
+            all_finances[current_email] = user_fin
+            save_all_finances(all_finances)
             st.rerun()
 
         st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
@@ -833,8 +922,8 @@ if menu_selection == "📅 Presupuesto Mensual":
         # 2. FACTURAS (GASTOS FIJOS)
         st.markdown("<div class='section-badge'>📑 2. FACTURAS (GASTOS FIJOS)</div>", unsafe_allow_html=True)
         st.caption("🔒 Protegida contra edición accidental. Usa los botones inferiores.")
-        df_fac_display = data_m["facturas"].copy()
-        if not df_fac_display.empty:
+        df_fac_display = df_fac.copy()
+        if not df_fac_display.empty and "Monto" in df_fac_display.columns:
             df_fac_display["Monto"] = df_fac_display["Monto"].apply(lambda x: f"${x:,.2f}")
         st.dataframe(df_fac_display, use_container_width=True)
 
@@ -849,18 +938,22 @@ if menu_selection == "📅 Presupuesto Mensual":
                 if btn_add_f:
                     if new_f_desc.strip():
                         new_row = {"Descripción": new_f_desc.strip(), "Monto": new_f_monto, "Tipo": new_f_tipo, "Fecha": new_f_fecha}
-                        data_m["facturas"] = pd.concat([data_m["facturas"], pd.DataFrame([new_row])], ignore_index=True)
+                        df_fac = pd.concat([df_fac, pd.DataFrame([new_row])], ignore_index=True)
+                        raw_month["facturas"] = df_fac.to_dict(orient="records")
+                        user_fin[sel_year][sel_month] = raw_month
+                        all_finances[current_email] = user_fin
+                        save_all_finances(all_finances)
                         st.success(f"Factura '{new_f_desc}' agregada.")
                         st.rerun()
                     else:
                         st.warning("Escribe una descripción.")
 
         with st.expander("✏️ Lápiz de Edición: Modificar Factura"):
-            if not data_m["facturas"].empty:
-                f_options = [f"{idx} - {row['Descripción']}" for idx, row in data_m["facturas"].iterrows()]
+            if not df_fac.empty:
+                f_options = [f"{idx} - {row['Descripción']}" for idx, row in df_fac.iterrows()]
                 selected_f_idx = st.selectbox("Seleccione factura", options=range(len(f_options)), format_func=lambda x: f_options[x], key=f"sel_f_{sel_year}_{sel_month}")
                 
-                current_f = data_m["facturas"].iloc[selected_f_idx]
+                current_f = df_fac.iloc[selected_f_idx]
                 with st.form(f"form_edit_fac_{sel_year}_{sel_month}"):
                     edit_f_desc = st.text_input("Descripción", value=current_f["Descripción"])
                     edit_f_monto = st.number_input("Monto ($)", min_value=0.0, value=float(current_f["Monto"]), step=10.0, format="%.2f")
@@ -874,15 +967,23 @@ if menu_selection == "📅 Presupuesto Mensual":
                         btn_del_f = st.form_submit_button("🗑️ Eliminar", use_container_width=True)
                         
                     if btn_save_f:
-                        data_m["facturas"].at[selected_f_idx, "Descripción"] = edit_f_desc
-                        data_m["facturas"].at[selected_f_idx, "Monto"] = edit_f_monto
-                        data_m["facturas"].at[selected_f_idx, "Tipo"] = edit_f_tipo
-                        data_m["facturas"].at[selected_f_idx, "Fecha"] = edit_f_fecha
+                        df_fac.at[selected_f_idx, "Descripción"] = edit_f_desc
+                        df_fac.at[selected_f_idx, "Monto"] = edit_f_monto
+                        df_fac.at[selected_f_idx, "Tipo"] = edit_f_tipo
+                        df_fac.at[selected_f_idx, "Fecha"] = edit_f_fecha
+                        raw_month["facturas"] = df_fac.to_dict(orient="records")
+                        user_fin[sel_year][sel_month] = raw_month
+                        all_finances[current_email] = user_fin
+                        save_all_finances(all_finances)
                         st.success("Factura actualizada.")
                         st.rerun()
                         
                     if btn_del_f:
-                        data_m["facturas"] = data_m["facturas"].drop(index=selected_f_idx).reset_index(drop=True)
+                        df_fac = df_fac.drop(index=selected_f_idx).reset_index(drop=True)
+                        raw_month["facturas"] = df_fac.to_dict(orient="records")
+                        user_fin[sel_year][sel_month] = raw_month
+                        all_finances[current_email] = user_fin
+                        save_all_finances(all_finances)
                         st.success("Factura eliminada.")
                         st.rerun()
             else:
@@ -892,8 +993,8 @@ if menu_selection == "📅 Presupuesto Mensual":
         # 3. GASTOS VARIABLES
         st.markdown("<div class='section-badge'>🛒 3. GASTOS VARIABLES</div>", unsafe_allow_html=True)
         st.caption("🔒 Protegida contra edición accidental. Usa los botones inferiores.")
-        df_var_display = data_m["gastos_var"].copy()
-        if not df_var_display.empty:
+        df_var_display = df_var.copy()
+        if not df_var_display.empty and "Monto" in df_var_display.columns:
             df_var_display["Monto"] = df_var_display["Monto"].apply(lambda x: f"${x:,.2f}")
         st.dataframe(df_var_display, use_container_width=True)
 
@@ -907,18 +1008,22 @@ if menu_selection == "📅 Presupuesto Mensual":
                 if btn_add_gv:
                     if new_gv_cat.strip():
                         new_row = {"Categoría": new_gv_cat.strip(), "Monto": new_gv_monto, "Tipo": new_gv_tipo}
-                        data_m["gastos_var"] = pd.concat([data_m["gastos_var"], pd.DataFrame([new_row])], ignore_index=True)
+                        df_var = pd.concat([df_var, pd.DataFrame([new_row])], ignore_index=True)
+                        raw_month["gastos_var"] = df_var.to_dict(orient="records")
+                        user_fin[sel_year][sel_month] = raw_month
+                        all_finances[current_email] = user_fin
+                        save_all_finances(all_finances)
                         st.success(f"Categoría '{new_gv_cat}' agregada.")
                         st.rerun()
                     else:
                         st.warning("Escribe una categoría.")
 
         with st.expander("✏️ Lápiz de Edición: Modificar Gasto Variable"):
-            if not data_m["gastos_var"].empty:
-                gv_options = [f"{idx} - {row['Categoría']}" for idx, row in data_m["gastos_var"].iterrows()]
+            if not df_var.empty:
+                gv_options = [f"{idx} - {row['Categoría']}" for idx, row in df_var.iterrows()]
                 selected_gv_idx = st.selectbox("Seleccione categoría", options=range(len(gv_options)), format_func=lambda x: gv_options[x], key=f"sel_gv_{sel_year}_{sel_month}")
                 
-                current_gv = data_m["gastos_var"].iloc[selected_gv_idx]
+                current_gv = df_var.iloc[selected_gv_idx]
                 with st.form(f"form_edit_gv_{sel_year}_{sel_month}"):
                     edit_gv_cat = st.text_input("Categoría", value=current_gv["Categoría"])
                     edit_gv_monto = st.number_input("Monto ($)", min_value=0.0, value=float(current_gv["Monto"]), step=10.0, format="%.2f")
@@ -931,14 +1036,22 @@ if menu_selection == "📅 Presupuesto Mensual":
                         btn_del_gv = st.form_submit_button("🗑️ Eliminar", use_container_width=True)
                         
                     if btn_save_gv:
-                        data_m["gastos_var"].at[selected_gv_idx, "Categoría"] = edit_gv_cat
-                        data_m["gastos_var"].at[selected_gv_idx, "Monto"] = edit_gv_monto
-                        data_m["gastos_var"].at[selected_gv_idx, "Tipo"] = edit_gv_tipo
+                        df_var.at[selected_gv_idx, "Categoría"] = edit_gv_cat
+                        df_var.at[selected_gv_idx, "Monto"] = edit_gv_monto
+                        df_var.at[selected_gv_idx, "Tipo"] = edit_gv_tipo
+                        raw_month["gastos_var"] = df_var.to_dict(orient="records")
+                        user_fin[sel_year][sel_month] = raw_month
+                        all_finances[current_email] = user_fin
+                        save_all_finances(all_finances)
                         st.success("Categoría actualizada.")
                         st.rerun()
                         
                     if btn_del_gv:
-                        data_m["gastos_var"] = data_m["gastos_var"].drop(index=selected_gv_idx).reset_index(drop=True)
+                        df_var = df_var.drop(index=selected_gv_idx).reset_index(drop=True)
+                        raw_month["gastos_var"] = df_var.to_dict(orient="records")
+                        user_fin[sel_year][sel_month] = raw_month
+                        all_finances[current_email] = user_fin
+                        save_all_finances(all_finances)
                         st.success("Categoría eliminada.")
                         st.rerun()
             else:
@@ -949,8 +1062,8 @@ if menu_selection == "📅 Presupuesto Mensual":
         # 4. AHORROS E INVERSIÓN
         st.markdown("<div class='section-badge'>🎯 4. AHORROS E INVERSIÓN (20%)</div>", unsafe_allow_html=True)
         st.caption("🔒 Protegida contra edición accidental. Usa los botones inferiores.")
-        df_ah_display = data_m["ahorros"].copy()
-        if not df_ah_display.empty:
+        df_ah_display = df_ah.copy()
+        if not df_ah_display.empty and "Monto" in df_ah_display.columns:
             df_ah_display["Monto"] = df_ah_display["Monto"].apply(lambda x: f"${x:,.2f}")
         st.dataframe(df_ah_display, use_container_width=True)
 
@@ -964,18 +1077,22 @@ if menu_selection == "📅 Presupuesto Mensual":
                 if btn_add_ah:
                     if new_ah_con.strip():
                         new_row = {"Concepto": new_ah_con.strip(), "Monto": new_ah_monto, "Notas": new_ah_notas}
-                        data_m["ahorros"] = pd.concat([data_m["ahorros"], pd.DataFrame([new_row])], ignore_index=True)
+                        df_ah = pd.concat([df_ah, pd.DataFrame([new_row])], ignore_index=True)
+                        raw_month["ahorros"] = df_ah.to_dict(orient="records")
+                        user_fin[sel_year][sel_month] = raw_month
+                        all_finances[current_email] = user_fin
+                        save_all_finances(all_finances)
                         st.success(f"Meta '{new_ah_con}' agregada.")
                         st.rerun()
                     else:
                         st.warning("Escribe un concepto.")
 
         with st.expander("✏️ Lápiz de Edición: Modificar Meta de Ahorro"):
-            if not data_m["ahorros"].empty:
-                ah_options = [f"{idx} - {row['Concepto']}" for idx, row in data_m["ahorros"].iterrows()]
+            if not df_ah.empty:
+                ah_options = [f"{idx} - {row['Concepto']}" for idx, row in df_ah.iterrows()]
                 selected_ah_idx = st.selectbox("Seleccione meta", options=range(len(ah_options)), format_func=lambda x: ah_options[x], key=f"sel_ah_{sel_year}_{sel_month}")
                 
-                current_ah = data_m["ahorros"].iloc[selected_ah_idx]
+                current_ah = df_ah.iloc[selected_ah_idx]
                 with st.form(f"form_edit_ah_{sel_year}_{sel_month}"):
                     edit_ah_con = st.text_input("Concepto", value=current_ah["Concepto"])
                     edit_ah_monto = st.number_input("Monto ($)", min_value=0.0, value=float(current_ah["Monto"]), step=10.0, format="%.2f")
@@ -988,14 +1105,22 @@ if menu_selection == "📅 Presupuesto Mensual":
                         btn_del_ah = st.form_submit_button("🗑️ Eliminar", use_container_width=True)
                         
                     if btn_save_ah:
-                        data_m["ahorros"].at[selected_ah_idx, "Concepto"] = edit_ah_con
-                        data_m["ahorros"].at[selected_ah_idx, "Monto"] = edit_ah_monto
-                        data_m["ahorros"].at[selected_ah_idx, "Notas"] = edit_ah_notas
+                        df_ah.at[selected_ah_idx, "Concepto"] = edit_ah_con
+                        df_ah.at[selected_ah_idx, "Monto"] = edit_ah_monto
+                        df_ah.at[selected_ah_idx, "Notas"] = edit_ah_notas
+                        raw_month["ahorros"] = df_ah.to_dict(orient="records")
+                        user_fin[sel_year][sel_month] = raw_month
+                        all_finances[current_email] = user_fin
+                        save_all_finances(all_finances)
                         st.success("Meta actualizada.")
                         st.rerun()
                         
                     if btn_del_ah:
-                        data_m["ahorros"] = data_m["ahorros"].drop(index=selected_ah_idx).reset_index(drop=True)
+                        df_ah = df_ah.drop(index=selected_ah_idx).reset_index(drop=True)
+                        raw_month["ahorros"] = df_ah.to_dict(orient="records")
+                        user_fin[sel_year][sel_month] = raw_month
+                        all_finances[current_email] = user_fin
+                        save_all_finances(all_finances)
                         st.success("Meta eliminada.")
                         st.rerun()
             else:
@@ -1010,8 +1135,8 @@ if menu_selection == "📅 Presupuesto Mensual":
     col_tx_list, col_tx_form = st.columns([1.3, 1])
     
     with col_tx_list:
-        if not data_m["seguimiento"].empty:
-            df_seg_disp = data_m["seguimiento"].copy()
+        if not df_seg.empty and "Monto" in df_seg.columns:
+            df_seg_disp = df_seg.copy()
             df_seg_disp["Monto"] = df_seg_disp["Monto"].apply(lambda x: f"${x:,.2f}")
             st.dataframe(df_seg_disp, use_container_width=True)
         else:
@@ -1035,7 +1160,11 @@ if menu_selection == "📅 Presupuesto Mensual":
             if btn_add_seg:
                 if seg_monto > 0:
                     new_tx = {"Monto": seg_monto, "Categoría": seg_cat, "Fecha": seg_dia, "Detalle": seg_det}
-                    data_m["seguimiento"] = pd.concat([data_m["seguimiento"], pd.DataFrame([new_tx])], ignore_index=True)
+                    df_seg = pd.concat([df_seg, pd.DataFrame([new_tx])], ignore_index=True)
+                    raw_month["seguimiento"] = df_seg.to_dict(orient="records")
+                    user_fin[sel_year][sel_month] = raw_month
+                    all_finances[current_email] = user_fin
+                    save_all_finances(all_finances)
                     st.success("Transacción registrada.")
                     st.rerun()
                 else:
@@ -1055,11 +1184,17 @@ elif menu_selection == "📊 Resumen Anual":
     summary_data = []
     for m in months_in_active_year:
         d = user_fin[sel_year][m]
-        ing = d["ingresos"]["Actual"].sum() if not d["ingresos"].empty else 0.0
-        fac = d["facturas"]["Monto"].sum() if not d["facturas"].empty else 0.0
-        var = d["gastos_var"]["Monto"].sum() if not d["gastos_var"].empty else 0.0
-        seg = d["seguimiento"]["Monto"].sum() if not d["seguimiento"].empty else 0.0
-        aho = d["ahorros"]["Monto"].sum() if not d["ahorros"].empty else 0.0
+        d_ing = pd.DataFrame(d.get("ingresos", []))
+        d_fac = pd.DataFrame(d.get("facturas", []))
+        d_var = pd.DataFrame(d.get("gastos_var", []))
+        d_seg = pd.DataFrame(d.get("seguimiento", []))
+        d_aho = pd.DataFrame(d.get("ahorros", []))
+        
+        ing = float(d_ing["Actual"].sum()) if not d_ing.empty and "Actual" in d_ing.columns else 0.0
+        fac = float(d_fac["Monto"].sum()) if not d_fac.empty and "Monto" in d_fac.columns else 0.0
+        var = float(d_var["Monto"].sum()) if not d_var.empty and "Monto" in d_var.columns else 0.0
+        seg = float(d_seg["Monto"].sum()) if not d_seg.empty and "Monto" in d_seg.columns else 0.0
+        aho = float(d_aho["Monto"].sum()) if not d_aho.empty and "Monto" in d_aho.columns else 0.0
         gas = fac + var + seg
         flujo = ing - gas - aho
         
@@ -1147,7 +1282,7 @@ elif menu_selection == "📈 Horizontes Financieros":
         "🏔️ Largo Plazo (10 o más Años)"
     ])
     
-    curr_aho = sum([user_fin[sel_year][m]["ahorros"]["Monto"].sum() for m in months_in_active_year])
+    curr_aho = sum([float(pd.DataFrame(user_fin[sel_year][m].get("ahorros", [])).get("Monto", pd.Series([0.0])).sum()) for m in months_in_active_year])
     
     col_sim1, col_sim2 = st.columns(2)
     with col_sim1:
@@ -1160,7 +1295,7 @@ elif menu_selection == "📈 Horizontes Financieros":
         records = []
         cumulative_principal = 0.0
         total_balance = 0.0
-        start_year = sel_year
+        start_year = int(sel_year)
         for i in range(1, years_count + 1):
             year_label = start_year + i - 1
             cumulative_principal += base_savings
@@ -1269,22 +1404,23 @@ elif menu_selection == "👑 Panel de Administración":
     ])
     
     # ------------------------------------------
-    # LISTADO Y APROBACIÓN DE TODOS LOS USUARIOS
+    # LISTADO Y APROBACIÓN DE TODOS LOS USUARIOS (PERSISTENTE)
     # ------------------------------------------
     with t_list:
         st.subheader("Directorio Global de Usuarios Registrados")
-        st.info("💡 Como Super Administrador, puedes activar o desactivar el acceso de cualquier usuario marcando la casilla 'Activo'. Los usuarios no aprobados no podrán iniciar sesión.")
+        st.info("💡 Como Super Administrador, puedes activar o desactivar el acceso de cualquier usuario marcando la casilla 'Activo'. Los usuarios registrados en móvil o web aparecen aquí en tiempo real.")
         
+        all_users_fresh = get_all_users()
         all_user_records = []
-        for mail, dat in st.session_state.users.items():
+        for mail, dat in all_users_fresh.items():
             all_user_records.append({
                 "Activo": dat.get("is_active", True),
                 "Nombre": dat["name"],
                 "Correo Electrónico": mail,
                 "Rol": dat["role"],
                 "Registrado el": dat.get("created_at", "N/A"),
-                "Intentos Fallidos": dat["failed_attempts"],
-                "Bloqueado": "Sí" if (dat["locked_until"] and datetime.now() < dat["locked_until"]) else "No"
+                "Intentos Fallidos": dat.get("failed_attempts", 0),
+                "Bloqueado": "Sí" if (dat.get("locked_until") and datetime.now() < datetime.strptime(dat["locked_until"], "%Y-%m-%d %H:%M:%S")) else "No"
             })
             
         df_users_all = pd.DataFrame(all_user_records)
@@ -1309,14 +1445,15 @@ elif menu_selection == "👑 Panel de Administración":
         changes_detected = False
         for _, row in edited_user_table.iterrows():
             target_m = row["Correo Electrónico"]
-            current_status = st.session_state.users[target_m].get("is_active", True)
+            current_status = all_users_fresh[target_m].get("is_active", True)
             new_status = row["Activo"]
             if current_status != new_status:
-                st.session_state.users[target_m]["is_active"] = new_status
+                all_users_fresh[target_m]["is_active"] = new_status
                 changes_detected = True
                 
         if changes_detected:
-            st.success("✅ Estado de aprobación actualizado exitosamente.")
+            save_all_users(all_users_fresh)
+            st.success("✅ Estado de aprobación actualizado exitosamente y guardado en el servidor.")
             st.rerun()
 
     # ------------------------------------------
@@ -1333,14 +1470,15 @@ elif menu_selection == "👑 Panel de Administración":
             btn_create_u = st.form_submit_button("Crear y Registrar Usuario", use_container_width=True)
             
             if btn_create_u:
+                all_users_fresh = get_all_users()
                 if not new_u_name or not new_u_email or not new_u_pass:
                     st.warning("Completa todos los campos obligatorios.")
-                elif new_u_email in st.session_state.users:
+                elif new_u_email in all_users_fresh:
                     st.error("Este correo ya se encuentra registrado.")
                 else:
                     nhash, nsalt = hash_password(new_u_pass)
-                    st.session_state.users[new_u_email] = {
-                        "name": new_u_name,
+                    all_users_fresh[new_u_email] = {
+                        "name": new_u_name.strip(),
                         "role": new_u_role,
                         "hash": nhash,
                         "salt": nsalt,
@@ -1349,13 +1487,14 @@ elif menu_selection == "👑 Panel de Administración":
                         "locked_until": None,
                         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M")
                     }
+                    save_all_users(all_users_fresh)
                     init_user_finances(new_u_email)
                     send_security_alert(
                         new_u_email, 
                         "USUARIO REGISTRADO POR ADMIN", 
                         f"Usuario {new_u_name} ({new_u_role}) registrado administrativamente con estado: {'Activo' if new_u_active else 'Inactivo'}."
                     )
-                    st.success(f"Usuario {new_u_name} registrado exitosamente.")
+                    st.success(f"Usuario {new_u_name} registrado exitosamente y disponible en todos los dispositivos.")
                     st.rerun()
 
     # ------------------------------------------
@@ -1363,10 +1502,11 @@ elif menu_selection == "👑 Panel de Administración":
     # ------------------------------------------
     with t_edit:
         st.subheader("✏️ Modificar o Gestionar Usuario")
-        user_emails = list(st.session_state.users.keys())
-        sel_u_email = st.selectbox("Seleccione el usuario a editar", user_emails, format_func=lambda x: f"{st.session_state.users[x]['name']} ({x})")
+        all_users_fresh = get_all_users()
+        user_emails = list(all_users_fresh.keys())
+        sel_u_email = st.selectbox("Seleccione el usuario a editar", user_emails, format_func=lambda x: f"{all_users_fresh[x]['name']} ({x})")
         
-        target_u = st.session_state.users[sel_u_email]
+        target_u = all_users_fresh[sel_u_email]
         
         with st.form("form_admin_edit_user"):
             st.write(f"Editando cuenta: **{sel_u_email}**")
@@ -1383,7 +1523,7 @@ elif menu_selection == "👑 Panel de Administración":
                 btn_del_u = st.form_submit_button("🗑️ Eliminar Usuario", use_container_width=True)
                 
             if btn_save_u:
-                target_u["name"] = ed_u_name
+                target_u["name"] = ed_u_name.strip()
                 target_u["role"] = ed_u_role
                 target_u["is_active"] = ed_u_active
                 if ed_u_unlock:
@@ -1395,6 +1535,8 @@ elif menu_selection == "👑 Panel de Administración":
                     target_u["salt"] = nsalt
                     send_security_alert(sel_u_email, "CLAVE MODIFICADA POR ADMIN", "Contraseña redefinida administrativamente.")
                     
+                all_users_fresh[sel_u_email] = target_u
+                save_all_users(all_users_fresh)
                 st.success(f"Usuario {ed_u_name} actualizado exitosamente.")
                 st.rerun()
                 
@@ -1402,9 +1544,14 @@ elif menu_selection == "👑 Panel de Administración":
                 if sel_u_email == current_email:
                     st.error("No puedes eliminar la cuenta con la que has iniciado sesión.")
                 else:
-                    del st.session_state.users[sel_u_email]
-                    if sel_u_email in st.session_state.finances:
-                        del st.session_state.finances[sel_u_email]
+                    del all_users_fresh[sel_u_email]
+                    save_all_users(all_users_fresh)
+                    
+                    finances_fresh = get_all_finances()
+                    if sel_u_email in finances_fresh:
+                        del finances_fresh[sel_u_email]
+                        save_all_finances(finances_fresh)
+                        
                     send_security_alert(sel_u_email, "USUARIO ELIMINADO", "Cuenta eliminada por el Super Administrador.")
                     st.success("Usuario eliminado del sistema.")
                     st.rerun()
@@ -1416,7 +1563,7 @@ elif menu_selection == "👑 Panel de Administración":
         st.subheader("🛡️ Configuración de Alertas por Correo Electrónico (SMTP)")
         st.info("Configura la cuenta de correo para enviar notificaciones al Administrador cuando ocurran registros de nuevos usuarios, intentos fallidos o incidentes de seguridad.")
         
-        cfg = st.session_state.smtp_config
+        cfg = get_smtp_config()
         with st.form("form_smtp_settings"):
             c_sm1, c_sm2 = st.columns(2)
             with c_sm1:
@@ -1435,7 +1582,7 @@ elif menu_selection == "👑 Panel de Administración":
                 btn_test_smtp = st.form_submit_button("✉️ Enviar Correo de Prueba", use_container_width=True)
                 
             if btn_save_smtp:
-                st.session_state.smtp_config = {
+                new_cfg = {
                     "server": smtp_server.strip(),
                     "port": int(smtp_port),
                     "sender": smtp_sender.strip(),
@@ -1443,7 +1590,8 @@ elif menu_selection == "👑 Panel de Administración":
                     "recipient": smtp_recipient.strip(),
                     "active": smtp_active
                 }
-                st.success("Configuración de correo actualizada correctamente.")
+                save_smtp_config(new_cfg)
+                st.success("Configuración de correo guardada permanentemente en el servidor.")
                 st.rerun()
                 
             if btn_test_smtp:
@@ -1469,8 +1617,9 @@ elif menu_selection == "👑 Panel de Administración":
 
         st.markdown("---")
         st.subheader("📋 Bitácora Forense de Eventos y Notificaciones Despachadas")
-        if st.session_state.audit_log:
-            df_log = pd.DataFrame(st.session_state.audit_log)
+        audit_records = get_audit_log()
+        if audit_records:
+            df_log = pd.DataFrame(audit_records)
             st.dataframe(df_log, use_container_width=True)
         else:
             st.success("Sin eventos de seguridad registrados.")
