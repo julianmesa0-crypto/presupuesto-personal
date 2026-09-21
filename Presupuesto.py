@@ -16,7 +16,7 @@ import io
 # 1. CONFIGURACIÓN DE PÁGINA
 # ==========================================
 st.set_page_config(
-    page_title="Presupuesto 50/30/20 Plus",
+    page_title="OptiBudget Pro",
     page_icon="💼",
     layout="wide",
     initial_sidebar_state="expanded"
