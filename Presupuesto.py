@@ -25,18 +25,15 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Inicializar tema de la app
-if "app_theme" not in st.session_state:
-    st.session_state.app_theme = "System"
-
 # ==========================================
-# 2. PERSISTENCIA EN ARCHIVOS LOCALES (COMPARTIDO ENTRE MÓVIL Y WEB)
+# 2. PERSISTENCIA EN ARCHIVOS LOCALES
 # ==========================================
 USERS_FILE = "users_db.json"
 FINANCES_FILE = "finances_db.json"
 SMTP_FILE = "smtp_db.json"
 AUDIT_FILE = "audit_db.json"
 SESSIONS_FILE = "sessions_db.json"
+SETTINGS_FILE = "settings_db.json"
 
 def hash_password(password: str, salt: str = None) -> tuple:
     if salt is None:
@@ -153,6 +150,22 @@ def append_audit_log(entry):
     logs.append(entry)
     save_json_file(AUDIT_FILE, logs)
 
+def get_user_settings(email):
+    all_settings = load_json_file(SETTINGS_FILE, {})
+    if email not in all_settings:
+        all_settings[email] = {
+            "currency": "COP",
+            "trm_usd_cop": 4100.0,
+            "trm_eur_cop": 4450.0
+        }
+        save_json_file(SETTINGS_FILE, all_settings)
+    return all_settings[email]
+
+def save_user_settings(email, settings_dict):
+    all_settings = load_json_file(SETTINGS_FILE, {})
+    all_settings[email] = settings_dict
+    save_json_file(SETTINGS_FILE, all_settings)
+
 CHRONO_MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
                  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
@@ -162,13 +175,13 @@ def create_initial_example_month():
             {"Check": False, "Descripción": "Salario / Ingreso Principal", "Actual": 0.0}
         ],
         "facturas": [
-            {"Descripción": "Renta / Vivienda", "Monto": 0.0, "Tipo": "Necesidades", "Fecha": "01"}
+            {"Descripción": "Renta / Vivienda", "Monto": 0.0, "Tipo": "Necesidades", "Fecha": "01", "Moneda": "COP"}
         ],
         "gastos_var": [
-            {"Categoría": "Mercado / Alimentación", "Monto": 0.0, "Tipo": "Necesidades"}
+            {"Categoría": "Mercado / Alimentación", "Monto": 0.0, "Tipo": "Necesidades", "Moneda": "COP"}
         ],
         "ahorros": [
-            {"Concepto": "Fondo de Emergencia", "Monto": 0.0, "Notas": "Meta inicial de ahorro"}
+            {"Concepto": "Fondo de Emergencia", "Monto": 0.0, "Notas": "Meta inicial de ahorro", "Moneda": "COP"}
         ],
         "seguimiento": []
     }
@@ -198,9 +211,9 @@ def init_user_finances(email):
 def clone_structure_from_month(source_month_data):
     return {
         "ingresos": [dict(r, Check=False, Actual=0.0) for r in source_month_data.get("ingresos", [])],
-        "facturas": [dict(r, Monto=0.0) for r in source_month_data.get("facturas", [])],
-        "gastos_var": [dict(r, Monto=0.0) for r in source_month_data.get("gastos_var", [])],
-        "ahorros": [dict(r, Monto=0.0) for r in source_month_data.get("ahorros", [])],
+        "facturas": [dict(r, Monto=0.0, Moneda=r.get("Moneda", "COP")) for r in source_month_data.get("facturas", [])],
+        "gastos_var": [dict(r, Monto=0.0, Moneda=r.get("Moneda", "COP")) for r in source_month_data.get("gastos_var", [])],
+        "ahorros": [dict(r, Monto=0.0, Moneda=r.get("Moneda", "COP")) for r in source_month_data.get("ahorros", [])],
         "seguimiento": []
     }
 
@@ -248,9 +261,6 @@ def send_security_alert(target_email, event_type, details):
             
     append_audit_log(log_entry)
 
-# ==========================================
-# 3. GESTIÓN DE SESIÓN PERSISTENTE & AUTO-DESCONEXIÓN POR INACTIVIDAD (60s)
-# ==========================================
 if "current_user" not in st.session_state:
     st.session_state.current_user = None
 if "active_module" not in st.session_state:
@@ -313,7 +323,7 @@ setTimeout(() => {
 st.markdown(inactivity_and_sync_js, unsafe_allow_html=True)
 
 # ==========================================
-# 4. ESTILOS CSS ADAPTABLES AL TEMA NATIVO DEL SISTEMA
+# 4. ESTILOS CSS ADAPTABLES (BOTONES ADAPTADOS A LIGHT / DARK)
 # ==========================================
 st.markdown("""
 <style>
@@ -651,12 +661,13 @@ if user_info.get("must_change_password", False):
     st.stop()
 
 # ==========================================
-# 7. MENÚ LATERAL ESTILO SAP BYDESIGN Y NOTIFICACIONES
+# 7. MENÚ LATERAL ESTILO SAP BYDESIGN Y CONFIGURACIÓN DE MONEDA / TRM
 # ==========================================
 is_admin = user_info["role"] == "Superusuario"
 init_user_finances(current_email)
 all_finances = get_all_finances()
 user_fin = all_finances.get(current_email, {})
+user_sets = get_user_settings(current_email)
 
 notifications = []
 now = datetime.now()
@@ -693,7 +704,7 @@ with st.sidebar:
       <div style='font-size: 1.35rem;'>💼</div>
       <div>
         <div style='font-size: 1.15rem; font-weight: 800; color: #FFFFFF !important; line-height: 1.1;'>OptiBudget Pro</div>
-        <div style='font-size: 0.72rem; color: #FFFFFF !important; text-transform: uppercase; letter-spacing: 0.8px;'>By Julian Mesa</div>
+        <div style='font-size: 0.72rem; color: #FFFFFF !important; text-transform: uppercase; letter-spacing: 0.8px;'>SAP ByDesign Edition</div>
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -709,12 +720,41 @@ with st.sidebar:
         else:
             st.success("✅ No tienes tareas pendientes. ¡Todo al día!")
 
+    # Tarjeta de Usuario Activo
     st.markdown(f"""
     <div class='sap-user-card'>
       <div style='font-size: 0.68rem; color: #FFFFFF !important; font-weight: 800; text-transform: uppercase;'>Usuario Activo</div>
       <div style='font-size: 0.98rem; color: #FFFFFF !important; font-weight: 800;'>{user_info['name']}</div>
       <div style='font-size: 0.78rem; color: #FFFFFF !important;'>{current_email}</div>
       <div style='margin-top: 5px;'><span style='background: #00385C; color: #FFFFFF !important; padding: 2px 7px; border-radius: 4px; font-size: 0.68rem; font-weight: 800;'>{user_info['role']}</span></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # CONFIGURACIÓN DE MONEDA PRINCIPAL Y TRM EN EL SIDEBAR
+    st.markdown("<div class='sap-work-center-header'>Configuración Monetaria & TRM</div>", unsafe_allow_html=True)
+    with st.form("form_currency_settings"):
+        curr_options = ["COP", "USD", "EUR"]
+        selected_curr = st.selectbox("Moneda Principal", curr_options, index=curr_options.index(user_sets.get("currency", "COP")))
+        
+        trm_usd = st.number_input("TRM USD a COP", value=float(user_sets.get("trm_usd_cop", 4100.0)), step=10.0)
+        trm_eur = st.number_input("TRM EUR a COP", value=float(user_sets.get("trm_eur_cop", 4450.0)), step=10.0)
+        
+        btn_save_sets = st.form_submit_button("Actualizar Divisa / TRM", use_container_width=True)
+        if btn_save_sets:
+            user_sets["currency"] = selected_curr
+            user_sets["trm_usd_cop"] = trm_usd
+            user_sets["trm_eur_cop"] = trm_eur
+            save_user_settings(current_email, user_sets)
+            st.success("Moneda principal y TRM actualizadas.")
+            st.rerun()
+
+    # Mostrar indicador TRM del día en el sidebar según moneda principal
+    main_curr = user_sets.get("currency", "COP")
+    st.markdown(f"""
+    <div style='background: rgba(255,255,255,0.12); padding: 8px; border-radius: 6px; font-size: 0.8rem; margin-top: 6px; text-align: center;'>
+      <b>TRM Activa del Día:</b><br>
+      1 USD = ${user_sets.get('trm_usd_cop', 4100):,.1f} COP<br>
+      1 EUR = ${user_sets.get('trm_eur_cop', 4450):,.1f} COP
     </div>
     """, unsafe_allow_html=True)
 
@@ -817,8 +857,34 @@ with st.sidebar:
         st.session_state.current_user = None
         st.rerun()
 
+# Función de conversión TRM a la moneda principal del usuario
+def convert_to_main_currency(amount, transaction_currency, sets):
+    main_curr = sets.get("currency", "COP")
+    trm_usd = float(sets.get("trm_usd_cop", 4100.0))
+    trm_eur = float(sets.get("trm_eur_cop", 4450.0))
+    
+    # 1. Llevar la transacción a COP como base intermedia si es necesaria
+    amount_in_cop = amount
+    if transaction_currency == "USD":
+        amount_in_cop = amount * trm_usd
+    elif transaction_currency == "EUR":
+        amount_in_cop = amount * trm_eur
+    elif transaction_currency == "COP":
+        amount_in_cop = amount
+        
+    # 2. Convertir de COP a la moneda principal del usuario
+    if main_curr == "COP":
+        return amount_in_cop
+    elif main_curr == "USD":
+        return amount_in_cop / trm_usd if trm_usd > 0 else amount_in_cop
+    elif main_curr == "EUR":
+        return amount_in_cop / trm_eur if trm_eur > 0 else amount_in_cop
+    return amount_in_cop
+
+curr_symbol = {"COP": "$", "USD": "US$", "EUR": "€"}.get(user_sets.get("currency", "COP"), "$")
+
 # ==========================================
-# 8. VISTA: PRESUPUESTO MENSUAL (REACTIVO EN TIEMPO REAL)
+# 8. VISTA: PRESUPUESTO MENSUAL (REACTIVO & TRM)
 # ==========================================
 if menu_selection == "📅 Presupuesto Mensual":
     raw_month = user_fin[sel_year][sel_month]
@@ -834,7 +900,7 @@ if menu_selection == "📅 Presupuesto Mensual":
     df_ah = pd.DataFrame(raw_month.get("ahorros", []))
     df_seg = pd.DataFrame(raw_month.get("seguimiento", []))
     if df_seg.empty:
-        df_seg = pd.DataFrame(columns=["Monto", "Categoría", "Fecha", "Detalle"])
+        df_seg = pd.DataFrame(columns=["Monto", "Categoría", "Fecha", "Detalle", "Moneda"])
         
     total_ingreso_act = float(df_ing["Actual"].sum()) if not df_ing.empty and "Actual" in df_ing.columns else 0.0
     total_facturas = float(df_fac["Monto"].sum()) if not df_fac.empty and "Monto" in df_fac.columns else 0.0
@@ -856,7 +922,7 @@ if menu_selection == "📅 Presupuesto Mensual":
     st.markdown(f"""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — {sel_month.upper()} {sel_year}</div>
-      <div class='main-header-subtitle'>Gestión y Ejecución Presupuestaria en Tiempo Real</div>
+      <div class='main-header-subtitle'>Moneda Principal: {user_sets.get('currency', 'COP')} | Gestión en Tiempo Real</div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -865,28 +931,28 @@ if menu_selection == "📅 Presupuesto Mensual":
         st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Ingreso Total Recibido</div>
-          <div class='kpi-card-value'>${total_ingreso_act:,.2f}</div>
+          <div class='kpi-card-value'>{curr_symbol}{total_ingreso_act:,.2f}</div>
         </div>
         """, unsafe_allow_html=True)
     with c2:
         st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Total Gastado (Fijo + Var)</div>
-          <div class='kpi-card-value'>${total_gastado:,.2f}</div>
+          <div class='kpi-card-value'>{curr_symbol}{total_gastado:,.2f}</div>
         </div>
         """, unsafe_allow_html=True)
     with c3:
         st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Total Ahorrado / Invertido</div>
-          <div class='kpi-card-value'>${total_ahorro:,.2f}</div>
+          <div class='kpi-card-value'>{curr_symbol}{total_ahorro:,.2f}</div>
         </div>
         """, unsafe_allow_html=True)
     with c4:
         st.markdown(f"""
         <div class='restante-card'>
           <div class='restante-card-label'>Dinero Restante Disponible</div>
-          <div class='restante-card-value'>${dinero_restante:,.2f}</div>
+          <div class='restante-card-value'>{curr_symbol}{dinero_restante:,.2f}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -898,14 +964,11 @@ if menu_selection == "📅 Presupuesto Mensual":
             "Categoría": ["Necesidades (50%)", "Deseos (30%)", "Ahorros (20%)"],
             "Monto": [nec_total, des_total, total_ahorro]
         })
-        if df_pie["Monto"].sum() == 0:
-            fig_pie = px.pie(df_pie, names="Categoría", values=[1, 1, 1], hole=0.55,
-                             color_discrete_sequence=["#94A3B8", "#CBD5E1", "#E2E8F0"])
-        else:
-            fig_pie = px.pie(df_pie, names="Categoría", values="Monto", hole=0.55,
-                             color_discrete_sequence=["#00385C", "#31B4D1", "#00ACA9"])
+        fig_pie = px.pie(df_pie, names="Categoría", values="Monto" if df_pie["Monto"].sum() > 0 else [1,1,1], hole=0.55,
+                         color_discrete_sequence=["#00385C", "#31B4D1", "#00ACA9"])
         fig_pie.update_layout(
-            title=dict(text="Distribución 50/30/20 del Mes", x=0.5, xanchor="center", font=dict(size=14)),
+            template="plotly_white",
+            title=dict(text=f"Distribución 50/30/20 ({user_sets.get('currency', 'COP')})", x=0.5, xanchor="center", font=dict(size=14)),
             margin=dict(t=40, b=10, l=10, r=10),
             height=250
         )
@@ -919,7 +982,7 @@ if menu_selection == "📅 Presupuesto Mensual":
         ])
         fig_bar.update_layout(
             barmode='group',
-            title=dict(text="Comparativa Flujo de Caja", x=0.5, xanchor="center", font=dict(size=14)),
+            title=dict(text=f"Comparativa Flujo de Caja ({user_sets.get('currency', 'COP')})", x=0.5, xanchor="center", font=dict(size=14)),
             margin=dict(t=40, b=10, l=10, r=10),
             height=250
         )
@@ -931,13 +994,13 @@ if menu_selection == "📅 Presupuesto Mensual":
 
     with col_izq:
         st.markdown("<div class='section-badge'>💵 1. INGRESOS (VALOR RECIBIDO)</div>", unsafe_allow_html=True)
-        st.caption("Editable directamente en la tabla. Se guarda y recalcula en tiempo real.")
+        st.caption(f"Valores expresados en su moneda principal ({user_sets.get('currency', 'COP')}).")
         edited_ing = st.data_editor(
             df_ing,
             column_config={
                 "Check": st.column_config.CheckboxColumn("✓", default=False),
                 "Descripción": st.column_config.TextColumn("Descripción"),
-                "Actual": st.column_config.NumberColumn("Actual ($)", format="$%.2f")
+                "Actual": st.column_config.NumberColumn(f"Actual ({curr_symbol})", format=f"{curr_symbol}%.2f")
             },
             num_rows="dynamic",
             use_container_width=True,
@@ -956,26 +1019,32 @@ if menu_selection == "📅 Presupuesto Mensual":
         st.caption("🔒 Protegida contra edición accidental. Usa los botones inferiores.")
         df_fac_display = df_fac.copy()
         if not df_fac_display.empty and "Monto" in df_fac_display.columns:
-            df_fac_display["Monto"] = df_fac_display["Monto"].apply(lambda x: f"${x:,.2f}")
+            df_fac_display["Monto"] = df_fac_display["Monto"].apply(lambda x: f"{curr_symbol}{x:,.2f}")
         st.dataframe(df_fac_display, use_container_width=True)
 
-        with st.expander("➕ Añadir Concepto de Factura"):
+        with st.expander("➕ Añadir Concepto de Factura (Con conversión TRM)"):
             with st.form(f"form_add_fac_{sel_year}_{sel_month}"):
                 new_f_desc = st.text_input("Descripción (ej. Renta, Agua, Luz)")
-                new_f_monto = st.number_input("Monto ($)", min_value=0.0, step=10.0, format="%.2f")
+                c_m1, c_m2 = st.columns(2)
+                with c_m1:
+                    raw_f_monto = st.number_input("Monto en moneda de origen", min_value=0.0, step=10.0, format="%.2f")
+                with c_m2:
+                    tx_curr = st.selectbox("Moneda de Transacción", ["COP", "USD", "EUR"], key="fac_tx_curr")
+                
                 new_f_tipo = st.selectbox("Clasificación 50/30/20", ["Necesidades", "Deseos"])
                 new_f_fecha = st.text_input("Día Límite", value="15")
-                btn_add_f = st.form_submit_button("Agregar Factura", use_container_width=True)
+                btn_add_f = st.form_submit_button("Agregar Factura con TRM", use_container_width=True)
                 
                 if btn_add_f:
                     if new_f_desc.strip():
-                        new_row = {"Descripción": new_f_desc.strip(), "Monto": new_f_monto, "Tipo": new_f_tipo, "Fecha": new_f_fecha}
+                        converted_monto = convert_to_main_currency(raw_f_monto, tx_curr, user_sets)
+                        new_row = {"Descripción": f"{new_f_desc.strip()} ({raw_f_monto:,.2f} {tx_curr})", "Monto": converted_monto, "Tipo": new_f_tipo, "Fecha": new_f_fecha, "Moneda": tx_curr}
                         df_fac = pd.concat([df_fac, pd.DataFrame([new_row])], ignore_index=True)
                         raw_month["facturas"] = df_fac.to_dict(orient="records")
                         user_fin[sel_year][sel_month] = raw_month
                         all_finances[current_email] = user_fin
                         save_all_finances(all_finances)
-                        st.success(f"Factura '{new_f_desc}' agregada.")
+                        st.success(f"Factura agregada y convertida a {user_sets.get('currency', 'COP')} (${converted_monto:,.2f}).")
                         st.rerun()
                     else:
                         st.warning("Escribe una descripción.")
@@ -988,7 +1057,7 @@ if menu_selection == "📅 Presupuesto Mensual":
                 current_f = df_fac.iloc[selected_f_idx]
                 with st.form(f"form_edit_fac_{sel_year}_{sel_month}"):
                     edit_f_desc = st.text_input("Descripción", value=current_f["Descripción"])
-                    edit_f_monto = st.number_input("Monto ($)", min_value=0.0, value=float(current_f["Monto"]), step=10.0, format="%.2f")
+                    edit_f_monto = st.number_input(f"Monto ({curr_symbol})", min_value=0.0, value=float(current_f["Monto"]), step=10.0, format="%.2f")
                     edit_f_tipo = st.selectbox("Tipo", ["Necesidades", "Deseos"], index=0 if current_f["Tipo"] == "Necesidades" else 1)
                     edit_f_fecha = st.text_input("Fecha", value=str(current_f["Fecha"]))
                     
@@ -1026,25 +1095,31 @@ if menu_selection == "📅 Presupuesto Mensual":
         st.caption("🔒 Protegida contra edición accidental. Usa los botones inferiores.")
         df_var_display = df_var.copy()
         if not df_var_display.empty and "Monto" in df_var_display.columns:
-            df_var_display["Monto"] = df_var_display["Monto"].apply(lambda x: f"${x:,.2f}")
+            df_var_display["Monto"] = df_var_display["Monto"].apply(lambda x: f"{curr_symbol}{x:,.2f}")
         st.dataframe(df_var_display, use_container_width=True)
 
-        with st.expander("➕ Añadir Categoría de Gasto Variable"):
+        with st.expander("➕ Añadir Categoría de Gasto Variable (Con TRM)"):
             with st.form(f"form_add_gv_{sel_year}_{sel_month}"):
                 new_gv_cat = st.text_input("Categoría (ej. Mercado, Gasolina, Ocio)")
-                new_gv_monto = st.number_input("Monto ($)", min_value=0.0, step=10.0, format="%.2f")
+                c_v1, c_v2 = st.columns(2)
+                with c_v1:
+                    raw_v_monto = st.number_input("Monto en moneda de origen", min_value=0.0, step=10.0, format="%.2f", key="gv_raw_monto")
+                with c_v2:
+                    tx_curr_v = st.selectbox("Moneda", ["COP", "USD", "EUR"], key="gv_tx_curr")
+                
                 new_gv_tipo = st.selectbox("Clasificación", ["Necesidades", "Deseos"], key=f"new_gv_tipo_{sel_year}_{sel_month}")
-                btn_add_gv = st.form_submit_button("Agregar Categoría", use_container_width=True)
+                btn_add_gv = st.form_submit_button("Agregar Categoría con TRM", use_container_width=True)
                 
                 if btn_add_gv:
                     if new_gv_cat.strip():
-                        new_row = {"Categoría": new_gv_cat.strip(), "Monto": new_gv_monto, "Tipo": new_gv_tipo}
+                        converted_v = convert_to_main_currency(raw_v_monto, tx_curr_v, user_sets)
+                        new_row = {"Categoría": f"{new_gv_cat.strip()} ({raw_v_monto:,.2f} {tx_curr_v})", "Monto": converted_v, "Tipo": new_gv_tipo, "Moneda": tx_curr_v}
                         df_var = pd.concat([df_var, pd.DataFrame([new_row])], ignore_index=True)
                         raw_month["gastos_var"] = df_var.to_dict(orient="records")
                         user_fin[sel_year][sel_month] = raw_month
                         all_finances[current_email] = user_fin
                         save_all_finances(all_finances)
-                        st.success(f"Categoría '{new_gv_cat}' agregada.")
+                        st.success(f"Categoría agregada y convertida a {user_sets.get('currency', 'COP')} (${converted_v:,.2f}).")
                         st.rerun()
                     else:
                         st.warning("Escribe una categoría.")
@@ -1057,7 +1132,7 @@ if menu_selection == "📅 Presupuesto Mensual":
                 current_gv = df_var.iloc[selected_gv_idx]
                 with st.form(f"form_edit_gv_{sel_year}_{sel_month}"):
                     edit_gv_cat = st.text_input("Categoría", value=current_gv["Categoría"])
-                    edit_gv_monto = st.number_input("Monto ($)", min_value=0.0, value=float(current_gv["Monto"]), step=10.0, format="%.2f")
+                    edit_gv_monto = st.number_input(f"Monto ({curr_symbol})", min_value=0.0, value=float(current_gv["Monto"]), step=10.0, format="%.2f")
                     edit_gv_tipo = st.selectbox("Tipo", ["Necesidades", "Deseos"], index=0 if current_gv["Tipo"] == "Necesidades" else 1, key=f"ed_gv_tipo_{sel_year}_{sel_month}")
                     
                     c_save, c_del = st.columns(2)
@@ -1094,25 +1169,31 @@ if menu_selection == "📅 Presupuesto Mensual":
         st.caption("🔒 Protegida contra edición accidental. Usa los botones inferiores.")
         df_ah_display = df_ah.copy()
         if not df_ah_display.empty and "Monto" in df_ah_display.columns:
-            df_ah_display["Monto"] = df_ah_display["Monto"].apply(lambda x: f"${x:,.2f}")
+            df_ah_display["Monto"] = df_ah_display["Monto"].apply(lambda x: f"{curr_symbol}{x:,.2f}")
         st.dataframe(df_ah_display, use_container_width=True)
 
-        with st.expander("➕ Añadir Meta de Ahorro"):
+        with st.expander("➕ Añadir Meta de Ahorro (Con TRM)"):
             with st.form(f"form_add_ah_{sel_year}_{sel_month}"):
                 new_ah_con = st.text_input("Concepto (ej. Fondo de Emergencia, Inversión)")
-                new_ah_monto = st.number_input("Monto ($)", min_value=0.0, step=10.0, format="%.2f")
+                c_a1, c_a2 = st.columns(2)
+                with c_a1:
+                    raw_a_monto = st.number_input("Monto origen", min_value=0.0, step=10.0, format="%.2f", key="ah_raw_monto")
+                with c_a2:
+                    tx_curr_a = st.selectbox("Moneda", ["COP", "USD", "EUR"], key="ah_tx_curr")
+                
                 new_ah_notas = st.text_input("Notas / Plazo", value="Meta personal")
-                btn_add_ah = st.form_submit_button("Agregar Meta", use_container_width=True)
+                btn_add_ah = st.form_submit_button("Agregar Meta con TRM", use_container_width=True)
                 
                 if btn_add_ah:
                     if new_ah_con.strip():
-                        new_row = {"Concepto": new_ah_con.strip(), "Monto": new_ah_monto, "Notas": new_ah_notas}
+                        converted_a = convert_to_main_currency(raw_a_monto, tx_curr_a, user_sets)
+                        new_row = {"Concepto": f"{new_ah_con.strip()} ({raw_a_monto:,.2f} {tx_curr_a})", "Monto": converted_a, "Notas": new_ah_notas, "Moneda": tx_curr_a}
                         df_ah = pd.concat([df_ah, pd.DataFrame([new_row])], ignore_index=True)
                         raw_month["ahorros"] = df_ah.to_dict(orient="records")
                         user_fin[sel_year][sel_month] = raw_month
                         all_finances[current_email] = user_fin
                         save_all_finances(all_finances)
-                        st.success(f"Meta '{new_ah_con}' agregada.")
+                        st.success(f"Meta agregada y convertida a {user_sets.get('currency', 'COP')} (${converted_a:,.2f}).")
                         st.rerun()
                     else:
                         st.warning("Escribe un concepto.")
@@ -1125,7 +1206,7 @@ if menu_selection == "📅 Presupuesto Mensual":
                 current_ah = df_ah.iloc[selected_ah_idx]
                 with st.form(f"form_edit_ah_{sel_year}_{sel_month}"):
                     edit_ah_con = st.text_input("Concepto", value=current_ah["Concepto"])
-                    edit_ah_monto = st.number_input("Monto ($)", min_value=0.0, value=float(current_ah["Monto"]), step=10.0, format="%.2f")
+                    edit_ah_monto = st.number_input(f"Monto ({curr_symbol})", min_value=0.0, value=float(current_ah["Monto"]), step=10.0, format="%.2f")
                     edit_ah_notas = st.text_input("Notas", value=str(current_ah["Notas"]))
                     
                     c_save, c_del = st.columns(2)
@@ -1167,15 +1248,20 @@ if menu_selection == "📅 Presupuesto Mensual":
     with col_tx_list:
         if not df_seg.empty and "Monto" in df_seg.columns:
             df_seg_disp = df_seg.copy()
-            df_seg_disp["Monto"] = df_seg_disp["Monto"].apply(lambda x: f"${x:,.2f}")
+            df_seg_disp["Monto"] = df_seg_disp["Monto"].apply(lambda x: f"{curr_symbol}{x:,.2f}")
             st.dataframe(df_seg_disp, use_container_width=True)
         else:
             st.info("Aún no has registrado transacciones diarias este mes.")
 
     with col_tx_form:
         with st.form(f"form_add_seg_{sel_year}_{sel_month}"):
-            st.markdown("**➕ Registrar Nueva Transacción**")
-            seg_monto = st.number_input("Monto ($)", min_value=0.0, step=5.0, format="%.2f")
+            st.markdown("**➕ Registrar Transacción (Con TRM)**")
+            c_s1, c_s2 = st.columns(2)
+            with c_s1:
+                raw_seg_monto = st.number_input("Monto origen", min_value=0.0, step=5.0, format="%.2f", key="seg_raw_monto")
+            with c_s2:
+                tx_curr_s = st.selectbox("Moneda", ["COP", "USD", "EUR"], key="seg_tx_curr")
+                
             seg_cat = st.selectbox("Categoría", [
                 "Mercado y Alimentación", "Transporte / Combustible", "Restaurantes y Salidas", "Entretenimiento y Ocio",
                 "Salud y Medicamentos", "Mascotas", "Cuidado Personal", "Hogar", "Ropa", "Educación", "Misceláneos"
@@ -1186,19 +1272,26 @@ if menu_selection == "📅 Presupuesto Mensual":
             with c_d2:
                 seg_det = st.text_input("Detalle", placeholder="Comercio / Nota")
                 
-            btn_add_seg = st.form_submit_button("Registrar Transacción", use_container_width=True)
+            btn_add_seg = st.form_submit_button("Registrar con TRM", use_container_width=True)
             if btn_add_seg:
-                if seg_monto > 0:
-                    new_tx = {"Monto": seg_monto, "Categoría": seg_cat, "Fecha": seg_dia, "Detalle": seg_det}
+                if raw_seg_monto > 0:
+                    converted_seg = convert_to_main_currency(raw_seg_monto, tx_curr_s, user_sets)
+                    new_tx = {
+                        "Monto": converted_seg, 
+                        "Categoría": seg_cat, 
+                        "Fecha": seg_dia, 
+                        "Detalle": f"{seg_det} ({raw_seg_monto:,.2f} {tx_curr_s})" if seg_det else f"({raw_seg_monto:,.2f} {tx_curr_s})",
+                        "Moneda": tx_curr_s
+                    }
                     df_seg = pd.concat([df_seg, pd.DataFrame([new_tx])], ignore_index=True)
                     raw_month["seguimiento"] = df_seg.to_dict(orient="records")
                     user_fin[sel_year][sel_month] = raw_month
                     all_finances[current_email] = user_fin
                     save_all_finances(all_finances)
-                    st.success("Transacción registrada.")
+                    st.success(f"Transacción registrada y convertida a {user_sets.get('currency', 'COP')} (${converted_seg:,.2f}).")
                     st.rerun()
                 else:
-                    st.warning("El monto debe ser superior a 0.")
+                    st.warning("El monto debe ser superior al valor 0.")
 
 # ==========================================
 # 9. VISTA: RESUMEN ANUAL CONSOLIDADO
@@ -1207,7 +1300,7 @@ elif menu_selection == "📊 Resumen Anual":
     st.markdown(f"""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — CONSOLIDADO ANUAL {sel_year}</div>
-      <div class='main-header-subtitle'>Rendimiento y Ejecución Financiera Mensualizada ({len(months_in_active_year)} meses registrados)</div>
+      <div class='main-header-subtitle'>Rendimiento y Ejecución Financiera ({user_sets.get('currency', 'COP')})</div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1248,28 +1341,28 @@ elif menu_selection == "📊 Resumen Anual":
         st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Ingresos Totales {sel_year}</div>
-          <div class='kpi-card-value'>${tot_ing:,.2f}</div>
+          <div class='kpi-card-value'>{curr_symbol}{tot_ing:,.2f}</div>
         </div>
         """, unsafe_allow_html=True)
     with ca2:
         st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Gastos Totales {sel_year}</div>
-          <div class='kpi-card-value'>${tot_gas:,.2f}</div>
+          <div class='kpi-card-value'>{curr_symbol}{tot_gas:,.2f}</div>
         </div>
         """, unsafe_allow_html=True)
     with ca3:
         st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Ahorro Acumulado {sel_year}</div>
-          <div class='kpi-card-value'>${tot_aho:,.2f}</div>
+          <div class='kpi-card-value'>{curr_symbol}{tot_aho:,.2f}</div>
         </div>
         """, unsafe_allow_html=True)
     with ca4:
         st.markdown(f"""
         <div class='restante-card'>
           <div class='restante-card-label'>Superávit Neto Anual</div>
-          <div class='restante-card-value'>${tot_flu:,.2f}</div>
+          <div class='restante-card-value'>{curr_symbol}{tot_flu:,.2f}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -1289,17 +1382,17 @@ elif menu_selection == "📊 Resumen Anual":
         
         df_annual_formatted = df_annual.copy()
         for col in ["Ingresos", "Gastos", "Ahorros", "Flujo Neto"]:
-            df_annual_formatted[col] = df_annual_formatted[col].apply(lambda x: f"${x:,.2f}")
+            df_annual_formatted[col] = df_annual_formatted[col].apply(lambda x: f"{curr_symbol}{x:,.2f}")
         st.dataframe(df_annual_formatted, use_container_width=True)
 
 # ==========================================
-# 10. VISTA: HORIZONTES FINANCIEROS (3, 5, 10+ AÑOS)
+# 10. VISTA: HORIZONTES FINANCIEROS
 # ==========================================
 elif menu_selection == "📈 Horizontes Financieros":
     st.markdown("""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — PLANIFICACIÓN PLURIANUAL</div>
-      <div class='main-header-subtitle'>Proyección Estratégica: Corto Plazo (3 años), Mediano Plazo (5 años) y Largo Plazo (10+ años)</div>
+      <div class='main-header-subtitle'>Proyección Estratégica en Moneda Principal</div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1313,7 +1406,7 @@ elif menu_selection == "📈 Horizontes Financieros":
     
     col_sim1, col_sim2 = st.columns(2)
     with col_sim1:
-        base_annual_savings = st.number_input("Ahorro / Inversión Anual Base ($)", min_value=0.0, value=float(curr_aho) if curr_aho > 0 else 3000.0, step=500.0)
+        base_annual_savings = st.number_input(f"Ahorro / Inversión Anual Base ({curr_symbol})", min_value=0.0, value=float(curr_aho) if curr_aho > 0 else 3000.0, step=500.0)
     with col_sim2:
         annual_growth_rate = st.slider("Tasa de Crecimiento / Rendimiento Anual Estimado (%)", min_value=1.0, max_value=25.0, value=8.0, step=0.5)
 
@@ -1339,78 +1432,66 @@ elif menu_selection == "📈 Horizontes Financieros":
 
     with tab_cp:
         st.subheader("⚡ Plan de Corto Plazo (Horizonte 3 Años)")
-        st.write("Ideal para: Fondo de emergencia de 6 meses, pago total de deudas de alto costo y compras planificadas.")
         df_cp = calculate_projection(3, base_annual_savings, annual_growth_rate)
         
         c_cp1, c_cp2, c_cp3 = st.columns(3)
         with c_cp1:
-            st.metric("Aporte Total Estimado (3 Años)", f"${df_cp['Aporte Acumulado'].iloc[-1]:,.2f}")
+            st.metric("Aporte Total", f"{curr_symbol}{df_cp['Aporte Acumulado'].iloc[-1]:,.2f}")
         with c_cp2:
-            st.metric("Rendimiento Proyectado", f"${df_cp['Rendimientos / Interés Compuesto'].iloc[-1]:,.2f}")
+            st.metric("Rendimiento", f"{curr_symbol}{df_cp['Rendimientos / Interés Compuesto'].iloc[-1]:,.2f}")
         with c_cp3:
-            st.metric("Capital Acumulado al Año 3", f"${df_cp['Patrimonio Total Estimado'].iloc[-1]:,.2f}")
+            st.metric("Capital Total", f"{curr_symbol}{df_cp['Patrimonio Total Estimado'].iloc[-1]:,.2f}")
             
-        fig_cp = px.bar(df_cp, x="Periodo", y=["Aporte Acumulado", "Rendimientos / Interés Compuesto"],
-                        color_discrete_sequence=["#00385C", "#00ACA9"])
-        fig_cp.update_layout(
-            title=dict(text="Evolución Patrimonial - Corto Plazo", x=0.5, xanchor="center", font=dict(size=14))
-        )
+        fig_cp = px.bar(df_cp, x="Periodo", y=["Aporte Acumulado", "Rendimientos / Interés Compuesto"], color_discrete_sequence=["#00385C", "#00ACA9"])
+        fig_cp.update_layout(title=dict(text="Evolución - Corto Plazo", x=0.5, xanchor="center", font=dict(size=14)))
         st.plotly_chart(fig_cp, use_container_width=True)
-        st.dataframe(df_cp.style.format({"Aporte Acumulado": "${:,.2f}", "Rendimientos / Interés Compuesto": "${:,.2f}", "Patrimonio Total Estimado": "${:,.2f}"}), use_container_width=True)
+        st.dataframe(df_cp.style.format({"Aporte Acumulado": f"{curr_symbol}{{:,.2f}}", "Rendimientos / Interés Compuesto": f"{curr_symbol}{{:,.2f}}", "Patrimonio Total Estimado": f"{curr_symbol}{{:,.2f}}"}), use_container_width=True)
 
     with tab_mp:
         st.subheader("🎯 Plan de Mediano Plazo (Horizonte 5 Años)")
-        st.write("Ideal para: Cuota inicial de vivienda, vehículo propio, capitalización de negocios o estudios avanzados.")
         df_mp = calculate_projection(5, base_annual_savings, annual_growth_rate)
         
         c_mp1, c_mp2, c_mp3 = st.columns(3)
         with c_mp1:
-            st.metric("Aporte Total Estimado (5 Años)", f"${df_mp['Aporte Acumulado'].iloc[-1]:,.2f}")
+            st.metric("Aporte Total", f"{curr_symbol}{df_mp['Aporte Acumulado'].iloc[-1]:,.2f}")
         with c_mp2:
-            st.metric("Rendimiento Proyectado", f"${df_mp['Rendimientos / Interés Compuesto'].iloc[-1]:,.2f}")
+            st.metric("Rendimiento", f"{curr_symbol}{df_mp['Rendimientos / Interés Compuesto'].iloc[-1]:,.2f}")
         with c_mp3:
-            st.metric("Capital Acumulado al Año 5", f"${df_mp['Patrimonio Total Estimado'].iloc[-1]:,.2f}")
+            st.metric("Capital Total", f"{curr_symbol}{df_mp['Patrimonio Total Estimado'].iloc[-1]:,.2f}")
             
         fig_mp = px.area(df_mp, x="Periodo", y="Patrimonio Total Estimado", color_discrete_sequence=["#00ACA9"])
-        fig_mp.update_layout(
-            title=dict(text="Curva de Crecimiento a 5 Años", x=0.5, xanchor="center", font=dict(size=14))
-        )
+        fig_mp.update_layout(title=dict(text="Curva - Mediano Plazo", x=0.5, xanchor="center", font=dict(size=14)))
         st.plotly_chart(fig_mp, use_container_width=True)
-        st.dataframe(df_mp.style.format({"Aporte Acumulado": "${:,.2f}", "Rendimientos / Interés Compuesto": "${:,.2f}", "Patrimonio Total Estimado": "${:,.2f}"}), use_container_width=True)
+        st.dataframe(df_mp.style.format({"Aporte Acumulado": f"{curr_symbol}{{:,.2f}}", "Rendimientos / Interés Compuesto": f"{curr_symbol}{{:,.2f}}", "Patrimonio Total Estimado": f"{curr_symbol}{{:,.2f}}"}), use_container_width=True)
 
     with tab_lp:
         st.subheader("🏔️ Plan de Largo Plazo (Horizonte 10 o más Años)")
-        st.write("Ideal para: Libertad financiera, retiro anticipado, portafolios indexados y patrimonio familiar intergeneracional.")
-        
         lp_years = st.slider("Seleccionar Horizonte Extendido", min_value=10, max_value=30, value=15, step=1)
         df_lp = calculate_projection(lp_years, base_annual_savings, annual_growth_rate)
         
         c_lp1, c_lp2, c_lp3 = st.columns(3)
         with c_lp1:
-            st.metric(f"Aportes Propios ({lp_years} Años)", f"${df_lp['Aporte Acumulado'].iloc[-1]:,.2f}")
+            st.metric("Aportes Propios", f"{curr_symbol}{df_lp['Aporte Acumulado'].iloc[-1]:,.2f}")
         with c_lp2:
-            st.metric("Ganancia por Interés Compuesto", f"${df_lp['Rendimientos / Interés Compuesto'].iloc[-1]:,.2f}")
+            st.metric("Ganancia Compuesta", f"{curr_symbol}{df_lp['Rendimientos / Interés Compuesto'].iloc[-1]:,.2f}")
         with c_lp3:
-            st.metric("Patrimonio Final Proyectado", f"${df_lp['Patrimonio Total Estimado'].iloc[-1]:,.2f}")
+            st.metric("Patrimonio Final", f"{curr_symbol}{df_lp['Patrimonio Total Estimado'].iloc[-1]:,.2f}")
             
         fig_lp = go.Figure()
         fig_lp.add_trace(go.Scatter(x=df_lp["Año"], y=df_lp["Aporte Acumulado"], name="Aporte Acumulado", fill='tozeroy', line=dict(color='#00385C')))
-        fig_lp.add_trace(go.Scatter(x=df_lp["Año"], y=df_lp["Patrimonio Total Estimado"], name="Patrimonio Total con Interés Compuesto", fill='tonexty', line=dict(color='#00ACA9')))
-        fig_lp.update_layout(
-            title=dict(text="Efecto Bola de Nieve a Largo Plazo", x=0.5, xanchor="center", font=dict(size=14)),
-            height=380
-        )
+        fig_lp.add_trace(go.Scatter(x=df_lp["Año"], y=df_lp["Patrimonio Total Estimado"], name="Patrimonio Total", fill='tonexty', line=dict(color='#00ACA9')))
+        fig_lp.update_layout(title=dict(text="Efecto Bola de Nieve", x=0.5, xanchor="center", font=dict(size=14)), height=380)
         st.plotly_chart(fig_lp, use_container_width=True)
-        st.dataframe(df_lp.style.format({"Aporte Acumulado": "${:,.2f}", "Rendimientos / Interés Compuesto": "${:,.2f}", "Patrimonio Total Estimado": "${:,.2f}"}), use_container_width=True)
+        st.dataframe(df_lp.style.format({"Aporte Acumulado": f"{curr_symbol}{{:,.2f}}", "Rendimientos / Interés Compuesto": f"{curr_symbol}{{:,.2f}}", "Patrimonio Total Estimado": f"{curr_symbol}{{:,.2f}}"}), use_container_width=True)
 
 # ==========================================
-# 11. PANEL DE ADMINISTRACIÓN Y SUPERUSUARIO
+# 11. PANEL DE ADMINISTRACIÓN
 # ==========================================
 elif menu_selection == "👑 Panel de Administración":
     st.markdown("""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — CENTRO DE CONTROL SUPERUSUARIO</div>
-      <div class='main-header-subtitle'>Gestión Total de Usuarios, Aprobación, Roles, Notificaciones SMTP y Auditoría Forense</div>
+      <div class='main-header-subtitle'>Gestión de Usuarios, Aprobación y Seguridad SMTP</div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1423,8 +1504,6 @@ elif menu_selection == "👑 Panel de Administración":
     
     with t_list:
         st.subheader("Directorio Global de Usuarios Registrados")
-        st.info("💡 Como Super Administrador, puedes activar o desactivar el acceso de cualquier usuario marcando la casilla 'Activo'. Los usuarios registrados en móvil o web aparecen aquí en tiempo real.")
-        
         all_users_fresh = get_all_users()
         all_user_records = []
         for mail, dat in all_users_fresh.items():
@@ -1433,27 +1512,20 @@ elif menu_selection == "👑 Panel de Administración":
                 "Nombre": dat["name"],
                 "Correo Electrónico": mail,
                 "Rol": dat["role"],
-                "Cambio Clave Obligatorio": "Sí" if dat.get("must_change_password", False) else "No",
-                "Registrado el": dat.get("created_at", "N/A"),
-                "Intentos Fallidos": dat.get("failed_attempts", 0),
-                "Bloqueado": "Sí" if (dat.get("locked_until") and datetime.now() < datetime.strptime(dat["locked_until"], "%Y-%m-%d %H:%M:%S")) else "No"
+                "Registrado el": dat.get("created_at", "N/A")
             })
             
         df_users_all = pd.DataFrame(all_user_records)
-        
         edited_user_table = st.data_editor(
             df_users_all,
             column_config={
-                "Activo": st.column_config.CheckboxColumn("Activo / Aprobado", help="Desmarca para suspender o marca para permitir acceso"),
-                "Correo Electrónico": st.column_config.TextColumn("Correo Electrónico", disabled=True),
+                "Activo": st.column_config.CheckboxColumn("Activo / Aprobado"),
+                "Correo Electrónico": st.column_config.TextColumn("Correo", disabled=True),
                 "Nombre": st.column_config.TextColumn("Nombre", disabled=True),
                 "Rol": st.column_config.TextColumn("Rol", disabled=True),
-                "Cambio Clave Obligatorio": st.column_config.TextColumn("Cambio Clave Pendiente", disabled=True),
-                "Registrado el": st.column_config.TextColumn("Registrado el", disabled=True),
-                "Intentos Fallidos": st.column_config.NumberColumn("Intentos Fallidos", disabled=True),
-                "Bloqueado": st.column_config.TextColumn("Bloqueado", disabled=True)
+                "Registrado el": st.column_config.TextColumn("Fecha", disabled=True)
             },
-            disabled=["Nombre", "Correo Electrónico", "Rol", "Cambio Clave Obligatorio", "Registrado el", "Intentos Fallidos", "Bloqueado"],
+            disabled=["Nombre", "Correo Electrónico", "Rol", "Registrado el"],
             hide_index=True,
             use_container_width=True,
             key="admin_user_approval_table"
@@ -1470,7 +1542,7 @@ elif menu_selection == "👑 Panel de Administración":
                 
         if changes_detected:
             save_all_users(all_users_fresh)
-            st.success("✅ Estado de aprobación actualizado exitosamente y guardado en el servidor.")
+            st.success("✅ Estado de aprobación actualizado.")
             st.rerun()
 
     with t_create:
@@ -1478,17 +1550,16 @@ elif menu_selection == "👑 Panel de Administración":
         with st.form("form_admin_create_user"):
             new_u_name = st.text_input("Nombre Completo")
             new_u_email = st.text_input("Correo Electrónico").strip().lower()
-            st.info("🔑 La contraseña inicial predeterminada será **Welcome123**. El usuario deberá cambiarla obligatoriamente en su primer inicio de sesión.")
             new_u_role = st.selectbox("Rol Asignado", ["Usuario", "Superusuario"])
             new_u_active = st.checkbox("Activar acceso inmediatamente", value=True)
-            btn_create_u = st.form_submit_button("Crear y Registrar Usuario", use_container_width=True)
+            btn_create_u = st.form_submit_button("Crear Usuario", use_container_width=True)
             
             if btn_create_u:
                 all_users_fresh = get_all_users()
                 if not new_u_name or not new_u_email:
-                    st.warning("Completa todos los campos obligatorios.")
+                    st.warning("Completa los campos obligatorios.")
                 elif new_u_email in all_users_fresh:
-                    st.error("Este correo ya se encuentra registrado.")
+                    st.error("Este correo ya existe.")
                 else:
                     nhash, nsalt = hash_password("Welcome123")
                     all_users_fresh[new_u_email] = {
@@ -1504,146 +1575,50 @@ elif menu_selection == "👑 Panel de Administración":
                     }
                     save_all_users(all_users_fresh)
                     init_user_finances(new_u_email)
-                    send_security_alert(
-                        new_u_email, 
-                        "USUARIO REGISTRADO POR ADMIN", 
-                        f"Usuario {new_u_name} ({new_u_role}) registrado administrativamente con clave inicial Welcome123."
-                    )
-                    st.success(f"Usuario {new_u_name} registrado exitosamente con contraseña provisional 'Welcome123'.")
+                    st.success(f"Usuario {new_u_name} creado con contraseña 'Welcome123'.")
                     st.rerun()
 
     with t_edit:
-        st.subheader("✏️ Modificar o Gestionar Usuario")
+        st.subheader("✏️ Modificar Usuario")
         all_users_fresh = get_all_users()
         user_emails = list(all_users_fresh.keys())
-        
         if "last_selected_edit_user" not in st.session_state:
             st.session_state.last_selected_edit_user = user_emails[0] if user_emails else ""
             
-        sel_u_email = st.selectbox(
-            "Seleccione el usuario a editar", 
-            user_emails, 
-            format_func=lambda x: f"{all_users_fresh[x]['name']} ({x})",
-            key="sel_user_to_edit_box"
-        )
-        
+        sel_u_email = st.selectbox("Seleccione usuario", user_emails, format_func=lambda x: f"{all_users_fresh[x]['name']} ({x})", key="sel_user_edit")
         if sel_u_email != st.session_state.last_selected_edit_user:
             st.session_state.last_selected_edit_user = sel_u_email
             st.rerun()
             
         target_u = all_users_fresh[sel_u_email]
-        
-        with st.form(f"form_admin_edit_user_{sel_u_email}"):
-            st.write(f"Editando cuenta: **{sel_u_email}**")
-            ed_u_name = st.text_input("Nombre Completo", value=target_u["name"], key=f"name_input_{sel_u_email}")
-            ed_u_role = st.selectbox("Rol", ["Usuario", "Superusuario"], index=0 if target_u["role"] == "Usuario" else 1, key=f"role_input_{sel_u_email}")
-            ed_u_active = st.checkbox("Cuenta Activa / Permitir Acceso al Sistema", value=target_u.get("is_active", True), key=f"active_input_{sel_u_email}")
-            ed_u_force_change = st.checkbox("Exigir cambio de contraseña en próximo inicio", value=target_u.get("must_change_password", False), key=f"force_pass_{sel_u_email}")
-            ed_u_new_pass = st.text_input("Restablecer Contraseña (dejar en blanco para conservar la actual)", type="password", key=f"pass_input_{sel_u_email}")
-            ed_u_unlock = st.checkbox("Restablecer intentos fallidos y desbloquear cuenta", value=True, key=f"unlock_input_{sel_u_email}")
+        with st.form(f"form_edit_{sel_u_email}"):
+            ed_u_name = st.text_input("Nombre", value=target_u["name"], key=f"name_{sel_u_email}")
+            ed_u_active = st.checkbox("Activo", value=target_u.get("is_active", True), key=f"active_{sel_u_email}")
+            ed_u_pass = st.text_input("Nueva Contraseña (opcional)", type="password", key=f"pass_{sel_u_email}")
             
-            c_ed_save, c_ed_del = st.columns(2)
-            with c_ed_save:
-                btn_save_u = st.form_submit_button("💾 Guardar Modificaciones", use_container_width=True)
-            with c_ed_del:
-                btn_del_u = st.form_submit_button("🗑️ Eliminar Usuario", use_container_width=True)
-                
-            if btn_save_u:
+            if st.form_submit_button("💾 Guardar", use_container_width=True):
                 target_u["name"] = ed_u_name.strip()
-                target_u["role"] = ed_u_role
                 target_u["is_active"] = ed_u_active
-                target_u["must_change_password"] = ed_u_force_change
-                if ed_u_unlock:
-                    target_u["failed_attempts"] = 0
-                    target_u["locked_until"] = None
-                if ed_u_new_pass.strip():
-                    nhash, nsalt = hash_password(ed_u_new_pass.strip())
+                if ed_u_pass.strip():
+                    nhash, nsalt = hash_password(ed_u_pass.strip())
                     target_u["hash"] = nhash
                     target_u["salt"] = nsalt
-                    send_security_alert(sel_u_email, "CLAVE MODIFICADA POR ADMIN", "Contraseña redefinida administrativamente.")
-                    
                 all_users_fresh[sel_u_email] = target_u
                 save_all_users(all_users_fresh)
-                st.success(f"Usuario {ed_u_name} actualizado exitosamente.")
+                st.success("Modificaciones guardadas.")
                 st.rerun()
-                
-            if btn_del_u:
-                if sel_u_email == current_email:
-                    st.error("No puedes eliminar la cuenta con la que has iniciado sesión.")
-                else:
-                    del all_users_fresh[sel_u_email]
-                    save_all_users(all_users_fresh)
-                    
-                    finances_fresh = get_all_finances()
-                    if sel_u_email in finances_fresh:
-                        del finances_fresh[sel_u_email]
-                        save_all_finances(finances_fresh)
-                        
-                    send_security_alert(sel_u_email, "USUARIO ELIMINADO", "Cuenta eliminada por el Super Administrador.")
-                    st.success("Usuario eliminado del sistema.")
-                    st.rerun()
 
     with t_audit:
-        st.subheader("🛡️ Configuración de Alertas por Correo Electrónico (SMTP)")
-        st.info("Configura la cuenta de correo para enviar notificaciones al Administrador cuando ocurran registros de nuevos usuarios, intentos fallidos o incidentes de seguridad.")
-        
+        st.subheader("🛡️ Configuración SMTP & Bitácora")
         cfg = get_smtp_config()
-        with st.form("form_smtp_settings"):
-            c_sm1, c_sm2 = st.columns(2)
-            with c_sm1:
-                smtp_server = st.text_input("Servidor SMTP", value=cfg["server"], help="Ej: smtp.gmail.com o smtp.office365.com")
-                smtp_sender = st.text_input("Correo Emisor (Remitente)", value=cfg["sender"], placeholder="tu_correo@gmail.com")
-                smtp_pass = st.text_input("Contraseña de Aplicación / SMTP", type="password", value=cfg["password"], help="Para Gmail, genera una 'Contraseña de aplicación'")
-            with c_sm2:
-                smtp_port = st.number_input("Puerto SMTP", value=int(cfg["port"]), step=1)
-                smtp_recipient = st.text_input("Correo Notificador (Destinatario)", value=cfg["recipient"], placeholder="admin@tudominio.com")
-                smtp_active = st.checkbox("Activar despacho automático de alertas por correo", value=cfg["active"])
-                
-            c_btn_save, c_btn_test = st.columns(2)
-            with c_btn_save:
-                btn_save_smtp = st.form_submit_button("💾 Guardar Configuración SMTP", use_container_width=True)
-            with c_btn_test:
-                btn_test_smtp = st.form_submit_button("✉️ Enviar Correo de Prueba", use_container_width=True)
-                
-            if btn_save_smtp:
-                new_cfg = {
-                    "server": smtp_server.strip(),
-                    "port": int(smtp_port),
-                    "sender": smtp_sender.strip(),
-                    "password": smtp_pass.strip(),
-                    "recipient": smtp_recipient.strip(),
-                    "active": smtp_active
-                }
-                save_smtp_config(new_cfg)
-                st.success("Configuración de correo guardada permanentemente en el servidor.")
+        with st.form("form_smtp"):
+            smtp_server = st.text_input("Servidor SMTP", value=cfg["server"])
+            smtp_sender = st.text_input("Remitente", value=cfg["sender"])
+            smtp_pass = st.text_input("Contraseña", type="password", value=cfg["password"])
+            smtp_port = st.number_input("Puerto", value=int(cfg["port"]))
+            smtp_recip = st.text_input("Destinatario", value=cfg["recipient"])
+            smtp_act = st.checkbox("Activar", value=cfg["active"])
+            if st.form_submit_button("Guardar SMTP", use_container_width=True):
+                save_smtp_config({"server": smtp_server, "port": int(smtp_port), "sender": smtp_sender, "password": smtp_pass, "recipient": smtp_recip, "active": smtp_act})
+                st.success("SMTP guardado.")
                 st.rerun()
-                
-            if btn_test_smtp:
-                if not smtp_sender.strip() or not smtp_pass.strip() or not smtp_recipient.strip():
-                    st.warning("Completa el remitente, la contraseña y el destinatario antes de enviar una prueba.")
-                else:
-                    try:
-                        test_msg = MIMEMultipart("alternative")
-                        test_msg["Subject"] = "✅ [PRUEBA] Notificación de Seguridad OptiBudget Pro"
-                        test_msg["From"] = smtp_sender.strip()
-                        test_msg["To"] = smtp_recipient.strip()
-                        body = "<h3>Prueba de Alerta Exitosa</h3><p>El sistema de notificaciones de OptiBudget Pro está conectado y listo para alertar ante nuevos registros e incidentes.</p>"
-                        test_msg.attach(MIMEText(body, "html"))
-                        
-                        srv = smtplib.SMTP(smtp_server.strip(), int(smtp_port), timeout=8)
-                        srv.starttls()
-                        srv.login(smtp_sender.strip(), smtp_pass.strip())
-                        srv.sendmail(smtp_sender.strip(), smtp_recipient.strip(), test_msg.as_string())
-                        srv.quit()
-                        st.success(f"¡Correo de prueba enviado con éxito a {smtp_recipient.strip()}!")
-                    except Exception as err:
-                        st.error(f"Fallo al conectar con el servidor de correo: {err}")
-
-        st.markdown("---")
-        st.subheader("📋 Bitácora Forense de Eventos y Notificaciones Despachadas")
-        audit_records = get_audit_log()
-        if audit_records:
-            df_log = pd.DataFrame(audit_records)
-            st.dataframe(df_log, use_container_width=True)
-        else:
-            st.success("Sin eventos de seguridad registrados.")
