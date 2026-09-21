@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 import io
 import json
 import os
+import time
 
 # ==========================================
 # 1. CONFIGURACIÓN DE PÁGINA
@@ -35,6 +36,7 @@ USERS_FILE = "users_db.json"
 FINANCES_FILE = "finances_db.json"
 SMTP_FILE = "smtp_db.json"
 AUDIT_FILE = "audit_db.json"
+SESSIONS_FILE = "sessions_db.json"
 
 def hash_password(password: str, salt: str = None) -> tuple:
     if salt is None:
@@ -64,7 +66,7 @@ def save_json_file(filepath, data):
 
 def get_all_users():
     default_admin_hash, default_admin_salt = hash_password("admin123")
-    default_user_hash, default_user_salt = hash_password("123456")
+    default_user_hash, default_user_salt = hash_password("Welcome123")
     default_users = {
         "admin@optibudget.com": {
             "name": "Super Administrador",
@@ -72,6 +74,7 @@ def get_all_users():
             "hash": default_admin_hash,
             "salt": default_admin_salt,
             "is_active": True,
+            "must_change_password": False,
             "failed_attempts": 0,
             "locked_until": None,
             "created_at": "2026-09-21 00:00"
@@ -82,6 +85,7 @@ def get_all_users():
             "hash": default_user_hash,
             "salt": default_user_salt,
             "is_active": True,
+            "must_change_password": False,
             "failed_attempts": 0,
             "locked_until": None,
             "created_at": "2026-09-21 00:00"
@@ -95,6 +99,37 @@ def get_all_users():
 
 def save_all_users(users_dict):
     save_json_file(USERS_FILE, users_dict)
+
+def get_sessions():
+    return load_json_file(SESSIONS_FILE, {})
+
+def save_sessions(sessions_dict):
+    save_json_file(SESSIONS_FILE, sessions_dict)
+
+def create_user_session(email):
+    token = secrets.token_urlsafe(24)
+    sessions = get_sessions()
+    sessions[token] = {
+        "email": email,
+        "last_activity": time.time()
+    }
+    save_sessions(sessions)
+    st.query_params["session_token"] = token
+    return token
+
+def update_user_activity(token):
+    sessions = get_sessions()
+    if token in sessions:
+        sessions[token]["last_activity"] = time.time()
+        save_sessions(sessions)
+
+def destroy_user_session(token):
+    sessions = get_sessions()
+    if token in sessions:
+        del sessions[token]
+        save_sessions(sessions)
+    if "session_token" in st.query_params:
+        del st.query_params["session_token"]
 
 def get_smtp_config():
     default_smtp = {
@@ -160,6 +195,15 @@ def init_user_finances(email):
         }
         save_all_finances(finances)
 
+def clone_structure_from_month(source_month_data):
+    return {
+        "ingresos": [dict(r, Check=False, Actual=0.0) for r in source_month_data.get("ingresos", [])],
+        "facturas": [dict(r, Monto=0.0) for r in source_month_data.get("facturas", [])],
+        "gastos_var": [dict(r, Monto=0.0) for r in source_month_data.get("gastos_var", [])],
+        "ahorros": [dict(r, Monto=0.0) for r in source_month_data.get("ahorros", [])],
+        "seguimiento": []
+    }
+
 def send_security_alert(target_email, event_type, details):
     log_entry = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -204,14 +248,75 @@ def send_security_alert(target_email, event_type, details):
             
     append_audit_log(log_entry)
 
-# Inicializar sesión actual
+# ==========================================
+# 3. GESTIÓN DE SESIÓN PERSISTENTE & AUTO-DESCONEXIÓN POR INACTIVIDAD (60s)
+# ==========================================
 if "current_user" not in st.session_state:
     st.session_state.current_user = None
 if "active_module" not in st.session_state:
     st.session_state.active_module = "📅 Presupuesto Mensual"
+if "prev_notif_count" not in st.session_state:
+    st.session_state.prev_notif_count = 0
+
+all_users = get_all_users()
+token_in_url = st.query_params.get("session_token", None)
+
+if token_in_url:
+    sessions = get_sessions()
+    if token_in_url in sessions:
+        session_info = sessions[token_in_url]
+        elapsed = time.time() - session_info.get("last_activity", 0)
+        # Control estricto de inactividad de 60 segundos
+        if elapsed > 60:
+            destroy_user_session(token_in_url)
+            st.session_state.current_user = None
+            st.warning("⏱️ Sesión cerrada por inactividad (60 segundos transcurridos). Por favor ingresa de nuevo.")
+            st.stop()
+        else:
+            # Sesión válida y reciente: restaurar usuario tras F5
+            user_candidate = session_info["email"]
+            if user_candidate in all_users and all_users[user_candidate].get("is_active", True):
+                st.session_state.current_user = user_candidate
+                update_user_activity(token_in_url)
+            else:
+                destroy_user_session(token_in_url)
+                st.session_state.current_user = None
+    else:
+        st.session_state.current_user = None
+
+# Script JavaScript de inactividad de 60 segundos y Auto-Refresco suave cada 8 segundos
+inactivity_and_sync_js = """
+<script>
+let idleTime = 0;
+const resetTimer = () => { idleTime = 0; };
+window.onload = resetTimer;
+window.onmousemove = resetTimer;
+window.onmousedown = resetTimer;
+window.ontouchstart = resetTimer;
+window.onclick = resetTimer;
+window.onkeypress = resetTimer;
+window.addEventListener('scroll', resetTimer, true);
+
+setInterval(() => {
+    idleTime += 1;
+    if (idleTime >= 60) {
+        window.location.reload();
+    }
+}, 1000);
+
+setTimeout(() => {
+    const activeEl = document.activeElement;
+    const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+    if (!isTyping) {
+        window.parent.postMessage({type: 'streamlit:trigger_rerun'}, '*');
+    }
+}, 8000);
+</script>
+"""
+st.markdown(inactivity_and_sync_js, unsafe_allow_html=True)
 
 # ==========================================
-# 3. ESTILOS CSS ADAPTABLES (SYSTEM, LIGHT, DARK)
+# 4. ESTILOS CSS ADAPTABLES (SYSTEM, LIGHT, DARK)
 # ==========================================
 if st.session_state.app_theme == "Dark":
     theme_css = """
@@ -380,7 +485,6 @@ html, body, .stApp {{
   margin-bottom: 14px;
 }}
 
-/* BANNER DE CABECERA CON TÍTULOS TOTALMENTE CENTRADOS */
 .main-header-banner {{
   background: var(--banner-bg) !important;
   color: #FFFFFF !important;
@@ -406,7 +510,6 @@ html, body, .stApp {{
   text-align: center !important;
 }}
 
-/* Tarjetas KPI y Dinero Restante */
 .kpi-card {{
   background: var(--card-bg) !important;
   border: 1.5px solid var(--card-border) !important;
@@ -467,7 +570,6 @@ html, body, .stApp {{
   border-left: 4px solid var(--badge-border) !important;
 }}
 
-/* CAMPANA DE NOTIFICACIONES */
 .bell-badge {{
   background-color: #D74546;
   color: white !important;
@@ -478,11 +580,10 @@ html, body, .stApp {{
   margin-left: 4px;
 }}
 
-/* NOTIFICACIONES CON CONTRASTE AZUL GARANTIZADO */
 .notif-box {{
   background-color: var(--notif-bg) !important;
   border: 1px solid var(--notif-border) !important;
-  border-left: 4px solid var(--notif-border) !important;
+  border-left: 5px solid var(--notif-border) !important;
   color: var(--notif-text) !important;
   padding: 10px 14px;
   border-radius: 8px;
@@ -496,8 +597,31 @@ html, body, .stApp {{
 </style>
 """, unsafe_allow_html=True)
 
+# Sonido de Campana de Notificación Web Audio API
+def trigger_bell_sound():
+    st.markdown("""
+    <script>
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.6);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.6);
+    } catch (e) {
+        console.log("Audio alert handled.");
+    }
+    </script>
+    """, unsafe_allow_html=True)
+
 # ==========================================
-# 4. PANTALLA DE ACCESO (LOGIN & REGISTRO PERSISTENTE)
+# 5. PANTALLA DE ACCESO (LOGIN & REGISTRO)
 # ==========================================
 all_users = get_all_users()
 
@@ -536,6 +660,8 @@ if st.session_state.current_user is None or st.session_state.current_user not in
                                 all_users_fresh[login_email] = u_data
                                 save_all_users(all_users_fresh)
                                 
+                                # Crear sesión persistente a F5 y registrar timestamp
+                                create_user_session(login_email)
                                 st.session_state.current_user = login_email
                                 init_user_finances(login_email)
                                 st.success("Acceso autorizado con éxito.")
@@ -555,33 +681,30 @@ if st.session_state.current_user is None or st.session_state.current_user not in
                                     send_security_alert(login_email, "INTENTO FALLIDO", f"Intento #{u_data['failed_attempts']}")
                                     st.warning(f"Credenciales incorrectas. Intentos restantes: {3 - u_data['failed_attempts']}.")
                     else:
-                        st.error("Credenciales inválidas. Si te registraste en móvil, asegúrate de haber usado el correo exacto.")
+                        st.error("Credenciales inválidas. Verifica tu correo.")
 
         with tab_reg:
             with st.form("form_register"):
                 reg_name = st.text_input("Nombre Completo")
                 reg_email = st.text_input("Correo Electrónico").strip().lower()
-                reg_pass = st.text_input("Contraseña", type="password")
-                reg_pass_conf = st.text_input("Confirmar Contraseña", type="password")
+                st.info("🔑 Por política del sistema, tu contraseña inicial asignada será: **Welcome123**. Tras ser activado por el Administrador, se te solicitará cambiarla obligatoriamente en tu primer ingreso.")
                 btn_reg = st.form_submit_button("Crear Cuenta", use_container_width=True)
                 
                 if btn_reg:
                     all_users_fresh = get_all_users()
-                    if not reg_name or not reg_email or not reg_pass:
-                        st.warning("Por favor completa todos los campos requeridos.")
-                    elif reg_pass != reg_pass_conf:
-                        st.error("Las contraseñas no coinciden.")
+                    if not reg_name or not reg_email:
+                        st.warning("Por favor completa tu nombre y correo electrónico.")
                     elif reg_email in all_users_fresh:
                         st.error("El correo ya se encuentra registrado.")
                     else:
-                        phash, psalt = hash_password(reg_pass)
-                        # Usuario nuevo inicia INACTIVO (pendiente de validación)
+                        phash, psalt = hash_password("Welcome123")
                         all_users_fresh[reg_email] = {
                             "name": reg_name.strip(),
                             "role": "Usuario",
                             "hash": phash,
                             "salt": psalt,
                             "is_active": False,
+                            "must_change_password": True,
                             "failed_attempts": 0,
                             "locked_until": None,
                             "created_at": datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -594,17 +717,53 @@ if st.session_state.current_user is None or st.session_state.current_user not in
                             "NUEVO USUARIO PENDIENTE DE APROBACIÓN", 
                             f"El usuario {reg_name} ({reg_email}) se ha registrado. Requiere activación en el panel de administración."
                         )
-                        st.success("✅ Cuenta registrada exitosamente. Guardada en el servidor y correo enviado al Administrador. Podrás ingresar tan pronto sea aprobada.")
+                        st.success("✅ Cuenta registrada exitosamente. Guardada en el servidor y correo enviado al Administrador. Podrás ingresar con 'Welcome123' tan pronto el Superusuario apruebe tu cuenta.")
     st.stop()
 
 # ==========================================
-# 5. MENÚ LATERAL ESTILO SAP BYDESIGN Y NOTIFICACIONES
+# 6. OBLIGACIÓN DE CAMBIO DE CONTRASEÑA EN PRIMER INGRESO
 # ==========================================
-current_email = st.session_state.current_user
 all_users = get_all_users()
+current_email = st.session_state.current_user
 user_info = all_users[current_email]
-is_admin = user_info["role"] == "Superusuario"
 
+if user_info.get("must_change_password", False):
+    st.markdown(f"""
+    <div class='main-header-banner'>
+      <div class='main-header-title'>ACTUALIZACIÓN OBLIGATORIA DE CONTRASEÑA</div>
+      <div class='main-header-subtitle'>Hola {user_info['name']}, tu cuenta fue aprobada con la clave provisional. Por seguridad debes definir tu contraseña personal definitiva para continuar.</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col_pc1, col_pc2, col_pc3 = st.columns([1, 1.4, 1])
+    with col_pc2:
+        with st.form("form_force_new_password"):
+            new_pass1 = st.text_input("Nueva Contraseña", type="password")
+            new_pass2 = st.text_input("Confirmar Nueva Contraseña", type="password")
+            btn_save_first_pass = st.form_submit_button("Establecer Contraseña y Acceder", use_container_width=True)
+            
+            if btn_save_first_pass:
+                if not new_pass1 or len(new_pass1) < 6:
+                    st.warning("La contraseña debe tener al menos 6 caracteres.")
+                elif new_pass1 == "Welcome123":
+                    st.error("No puedes reutilizar la contraseña temporal 'Welcome123'.")
+                elif new_pass1 != new_pass2:
+                    st.error("Las contraseñas no coinciden.")
+                else:
+                    nhash, nsalt = hash_password(new_pass1)
+                    user_info["hash"] = nhash
+                    user_info["salt"] = nsalt
+                    user_info["must_change_password"] = False
+                    all_users[current_email] = user_info
+                    save_all_users(all_users)
+                    st.success("✅ Contraseña actualizada correctamente. ¡Bienvenido a OptiBudget Pro!")
+                    st.rerun()
+    st.stop()
+
+# ==========================================
+# 7. MENÚ LATERAL ESTILO SAP BYDESIGN Y NOTIFICACIONES
+# ==========================================
+is_admin = user_info["role"] == "Superusuario"
 init_user_finances(current_email)
 all_finances = get_all_finances()
 user_fin = all_finances.get(current_email, {})
@@ -618,12 +777,27 @@ current_sys_month = CHRONO_MONTHS[now.month - 1]
 if is_admin:
     pending_users = [mail for mail, u in all_users.items() if not u.get("is_active", False)]
     if pending_users:
-        notifications.append(f"Hay **{len(pending_users)}** usuario(s) nuevo(s) pendiente(s) de aprobación en el Panel de Administración.")
+        notifications.append({
+            "text": f"Hay <b>{len(pending_users)}</b> usuario(s) pendiente(s) de aprobación.",
+            "is_approval": True
+        })
 
 if current_sys_year not in user_fin:
-    notifications.append(f"Estamos en el año **{current_sys_year}** y aún no has creado este año fiscal.")
+    notifications.append({
+        "text": f"Estamos en el año <b>{current_sys_year}</b> y aún no has creado este año fiscal.",
+        "is_approval": False
+    })
 elif current_sys_month not in user_fin[current_sys_year]:
-    notifications.append(f"Ha comenzado **{current_sys_month} {current_sys_year}** y aún no has creado este mes.")
+    notifications.append({
+        "text": f"Ha comenzado <b>{current_sys_month} {current_sys_year}</b> y aún no has creado este mes.",
+        "is_approval": False
+    })
+
+# Disparar sonido si llegaron nuevas alertas
+notif_count = len(notifications)
+if notif_count > st.session_state.prev_notif_count:
+    trigger_bell_sound()
+st.session_state.prev_notif_count = notif_count
 
 with st.sidebar:
     st.markdown("""
@@ -646,12 +820,17 @@ with st.sidebar:
         st.session_state.app_theme = theme_choice
         st.rerun()
 
-    # CAMPANA DE NOTIFICACIONES (🔔)
-    notif_count = len(notifications)
-    with st.expander(f"🔔 Notificaciones y Tareas {f'({notif_count})' if notif_count > 0 else ''}"):
+    # CAMPANA DE NOTIFICACIONES (🔔) CON HIPERVÍNCULOS
+    with st.expander(f"🔔 Notificaciones y Tareas {f'({notif_count})' if notif_count > 0 else ''}", expanded=(notif_count > 0)):
         if notifications:
-            for n in notifications:
-                st.markdown(f"<div class='notif-box'>⚠️ {n}</div>", unsafe_allow_html=True)
+            for idx, n in enumerate(notifications):
+                st.markdown(f"<div class='notif-box'>⚠️ {n['text']}</div>", unsafe_allow_html=True)
+                # Hipervínculo directo al módulo de aprobación
+                if n["is_approval"]:
+                    if st.button("👉 Ir a Aprobar Usuarios Ahora", key=f"link_aprob_{idx}", use_container_width=True):
+                        st.session_state.active_module = "👑 Panel de Administración"
+                        st.session_state.admin_selected_tab = "👥 Listado & Aprobación de Usuarios"
+                        st.rerun()
         else:
             st.success("✅ No tienes tareas pendientes. ¡Todo al día!")
 
@@ -727,7 +906,7 @@ with st.sidebar:
 
     months_in_active_year = [m for m in CHRONO_MONTHS if m in user_fin.get(sel_year, {})]
     if not months_in_active_year:
-        user_fin[sel_year] = {"Enero": create_initial_example_month()}
+        user_fin[sel_year]["Enero"] = create_initial_example_month()
         all_finances[current_email] = user_fin
         save_all_finances(all_finances)
         months_in_active_year = ["Enero"]
@@ -749,13 +928,7 @@ with st.sidebar:
                 
                 if btn_create_month:
                     source_data = user_fin[sel_year][clone_from]
-                    cloned_data = {
-                        "ingresos": [dict(r, Check=False, Actual=0.0) for r in source_data.get("ingresos", [])],
-                        "facturas": [dict(r, Monto=0.0) for r in source_data.get("facturas", [])],
-                        "gastos_var": [dict(r, Monto=0.0) for r in source_data.get("gastos_var", [])],
-                        "ahorros": [dict(r, Monto=0.0) for r in source_data.get("ahorros", [])],
-                        "seguimiento": []
-                    }
+                    cloned_data = clone_structure_from_month(source_data)
                     user_fin[sel_year][next_month_to_create] = cloned_data
                     all_finances[current_email] = user_fin
                     save_all_finances(all_finances)
@@ -767,11 +940,14 @@ with st.sidebar:
 
     st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
     if st.button("🚪 Cerrar Sesión", use_container_width=True):
+        token_active = st.query_params.get("session_token", None)
+        if token_active:
+            destroy_user_session(token_active)
         st.session_state.current_user = None
         st.rerun()
 
 # ==========================================
-# 6. VISTA: PRESUPUESTO MENSUAL (REACTIVO EN TIEMPO REAL)
+# 8. VISTA: PRESUPUESTO MENSUAL (REACTIVO EN TIEMPO REAL)
 # ==========================================
 if menu_selection == "📅 Presupuesto Mensual":
     raw_month = user_fin[sel_year][sel_month]
@@ -1171,7 +1347,7 @@ if menu_selection == "📅 Presupuesto Mensual":
                     st.warning("El monto debe ser superior a 0.")
 
 # ==========================================
-# 7. VISTA: RESUMEN ANUAL CONSOLIDADO
+# 9. VISTA: RESUMEN ANUAL CONSOLIDADO
 # ==========================================
 elif menu_selection == "📊 Resumen Anual":
     st.markdown(f"""
@@ -1266,7 +1442,7 @@ elif menu_selection == "📊 Resumen Anual":
         st.dataframe(df_annual_formatted, use_container_width=True)
 
 # ==========================================
-# 8. VISTA: HORIZONTES FINANCIEROS (3, 5, 10+ AÑOS)
+# 10. VISTA: HORIZONTES FINANCIEROS (3, 5, 10+ AÑOS)
 # ==========================================
 elif menu_selection == "📈 Horizontes Financieros":
     st.markdown("""
@@ -1386,7 +1562,7 @@ elif menu_selection == "📈 Horizontes Financieros":
         st.dataframe(df_lp.style.format({"Aporte Acumulado": "${:,.2f}", "Rendimientos / Interés Compuesto": "${:,.2f}", "Patrimonio Total Estimado": "${:,.2f}"}), use_container_width=True)
 
 # ==========================================
-# 9. PANEL DE ADMINISTRACIÓN Y SUPERUSUARIO
+# 11. PANEL DE ADMINISTRACIÓN Y SUPERUSUARIO
 # ==========================================
 elif menu_selection == "👑 Panel de Administración":
     st.markdown("""
@@ -1418,6 +1594,7 @@ elif menu_selection == "👑 Panel de Administración":
                 "Nombre": dat["name"],
                 "Correo Electrónico": mail,
                 "Rol": dat["role"],
+                "Cambio Clave Obligatorio": "Sí" if dat.get("must_change_password", False) else "No",
                 "Registrado el": dat.get("created_at", "N/A"),
                 "Intentos Fallidos": dat.get("failed_attempts", 0),
                 "Bloqueado": "Sí" if (dat.get("locked_until") and datetime.now() < datetime.strptime(dat["locked_until"], "%Y-%m-%d %H:%M:%S")) else "No"
@@ -1432,11 +1609,12 @@ elif menu_selection == "👑 Panel de Administración":
                 "Correo Electrónico": st.column_config.TextColumn("Correo Electrónico", disabled=True),
                 "Nombre": st.column_config.TextColumn("Nombre", disabled=True),
                 "Rol": st.column_config.TextColumn("Rol", disabled=True),
+                "Cambio Clave Obligatorio": st.column_config.TextColumn("Cambio Clave Pendiente", disabled=True),
                 "Registrado el": st.column_config.TextColumn("Registrado el", disabled=True),
                 "Intentos Fallidos": st.column_config.NumberColumn("Intentos Fallidos", disabled=True),
                 "Bloqueado": st.column_config.TextColumn("Bloqueado", disabled=True)
             },
-            disabled=["Nombre", "Correo Electrónico", "Rol", "Registrado el", "Intentos Fallidos", "Bloqueado"],
+            disabled=["Nombre", "Correo Electrónico", "Rol", "Cambio Clave Obligatorio", "Registrado el", "Intentos Fallidos", "Bloqueado"],
             hide_index=True,
             use_container_width=True,
             key="admin_user_approval_table"
@@ -1464,25 +1642,26 @@ elif menu_selection == "👑 Panel de Administración":
         with st.form("form_admin_create_user"):
             new_u_name = st.text_input("Nombre Completo")
             new_u_email = st.text_input("Correo Electrónico").strip().lower()
-            new_u_pass = st.text_input("Contraseña Temporal", type="password")
+            st.info("🔑 La contraseña inicial predeterminada será **Welcome123**. El usuario deberá cambiarla obligatoriamente en su primer inicio de sesión.")
             new_u_role = st.selectbox("Rol Asignado", ["Usuario", "Superusuario"])
             new_u_active = st.checkbox("Activar acceso inmediatamente", value=True)
             btn_create_u = st.form_submit_button("Crear y Registrar Usuario", use_container_width=True)
             
             if btn_create_u:
                 all_users_fresh = get_all_users()
-                if not new_u_name or not new_u_email or not new_u_pass:
+                if not new_u_name or not new_u_email:
                     st.warning("Completa todos los campos obligatorios.")
                 elif new_u_email in all_users_fresh:
                     st.error("Este correo ya se encuentra registrado.")
                 else:
-                    nhash, nsalt = hash_password(new_u_pass)
+                    nhash, nsalt = hash_password("Welcome123")
                     all_users_fresh[new_u_email] = {
                         "name": new_u_name.strip(),
                         "role": new_u_role,
                         "hash": nhash,
                         "salt": nsalt,
                         "is_active": new_u_active,
+                        "must_change_password": True,
                         "failed_attempts": 0,
                         "locked_until": None,
                         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -1492,29 +1671,43 @@ elif menu_selection == "👑 Panel de Administración":
                     send_security_alert(
                         new_u_email, 
                         "USUARIO REGISTRADO POR ADMIN", 
-                        f"Usuario {new_u_name} ({new_u_role}) registrado administrativamente con estado: {'Activo' if new_u_active else 'Inactivo'}."
+                        f"Usuario {new_u_name} ({new_u_role}) registrado administrativamente con clave inicial Welcome123."
                     )
-                    st.success(f"Usuario {new_u_name} registrado exitosamente y disponible en todos los dispositivos.")
+                    st.success(f"Usuario {new_u_name} registrado exitosamente con contraseña provisional 'Welcome123'.")
                     st.rerun()
 
     # ------------------------------------------
-    # EDITAR USUARIOS EXISTENTES
+    # EDITAR USUARIOS EXISTENTES (SIN ARRASTRE DE DATOS)
     # ------------------------------------------
     with t_edit:
         st.subheader("✏️ Modificar o Gestionar Usuario")
         all_users_fresh = get_all_users()
         user_emails = list(all_users_fresh.keys())
-        sel_u_email = st.selectbox("Seleccione el usuario a editar", user_emails, format_func=lambda x: f"{all_users_fresh[x]['name']} ({x})")
         
+        if "last_selected_edit_user" not in st.session_state:
+            st.session_state.last_selected_edit_user = user_emails[0] if user_emails else ""
+            
+        sel_u_email = st.selectbox(
+            "Seleccione el usuario a editar", 
+            user_emails, 
+            format_func=lambda x: f"{all_users_fresh[x]['name']} ({x})",
+            key="sel_user_to_edit_box"
+        )
+        
+        if sel_u_email != st.session_state.last_selected_edit_user:
+            st.session_state.last_selected_edit_user = sel_u_email
+            st.rerun()
+            
         target_u = all_users_fresh[sel_u_email]
         
-        with st.form("form_admin_edit_user"):
+        with st.form(f"form_admin_edit_user_{sel_u_email}"):
             st.write(f"Editando cuenta: **{sel_u_email}**")
-            ed_u_name = st.text_input("Nombre Completo", value=target_u["name"])
-            ed_u_role = st.selectbox("Rol", ["Usuario", "Superusuario"], index=0 if target_u["role"] == "Usuario" else 1)
-            ed_u_active = st.checkbox("Cuenta Activa / Permitir Acceso al Sistema", value=target_u.get("is_active", True))
-            ed_u_new_pass = st.text_input("Nueva Contraseña (dejar en blanco para no modificarla)", type="password")
-            ed_u_unlock = st.checkbox("Restablecer intentos fallidos y desbloquear cuenta", value=True)
+            ed_u_name = st.text_input("Nombre Completo", value=target_u["name"], key=f"name_input_{sel_u_email}")
+            ed_u_role = st.selectbox("Rol", ["Usuario", "Superusuario"], index=0 if target_u["role"] == "Usuario" else 1, key=f"role_input_{sel_u_email}")
+            ed_u_active = st.checkbox("Cuenta Activa / Permitir Acceso al Sistema", value=target_u.get("is_active", True), key=f"active_input_{sel_u_email}")
+            ed_u_force_change = st.checkbox("Exigir cambio de contraseña en próximo inicio", value=target_u.get("must_change_password", False), key=f"force_pass_{sel_u_email}")
+            ed_u_new_pass = st.text_input("Restablecer Contraseña (dejar en blanco para conservar la actual)", type="password", key=f"pass_input_{sel_u_email}")
+            ed_u_unlock = st.checkbox("Restablecer intentos fallidos y desbloquear cuenta", value=True, key=f"unlock_input_{sel_u_email}")
             
             c_ed_save, c_ed_del = st.columns(2)
             with c_ed_save:
@@ -1526,6 +1719,7 @@ elif menu_selection == "👑 Panel de Administración":
                 target_u["name"] = ed_u_name.strip()
                 target_u["role"] = ed_u_role
                 target_u["is_active"] = ed_u_active
+                target_u["must_change_password"] = ed_u_force_change
                 if ed_u_unlock:
                     target_u["failed_attempts"] = 0
                     target_u["locked_until"] = None
