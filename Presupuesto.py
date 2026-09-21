@@ -313,151 +313,46 @@ setTimeout(() => {
 st.markdown(inactivity_and_sync_js, unsafe_allow_html=True)
 
 # ==========================================
-# 4. CONTROL CROMÁTICO ESTRICTO PARA TABLAS Y CONTENEDORES
+# 4. ESTILOS CSS ADAPTABLES AL TEMA NATIVO DEL SISTEMA
 # ==========================================
-if st.session_state.app_theme == "Dark":
-    theme_css = """
-    :root {
-      color-scheme: dark !important;
-      --card-bg: #00385C;
-      --card-border: #18688D;
-      --main-text: #FFFFFF;
-      --sub-text: #A0DFF7;
-      --kpi-title: #38BDF8;
-      --banner-bg: linear-gradient(135deg, #00223A, #00385C);
-      --badge-bg: #08283D;
-      --badge-border: #00ACA9;
-      --badge-text: #FFFFFF;
-      --restante-bg: #0A3D42;
-      --restante-border: #00ACA9;
-      --restante-text: #E5FFFE;
-      --notif-bg: #00385C;
-      --notif-border: #00ACA9;
-      --notif-text: #FFFFFF;
-      --tbl-bg: #00385C;
-      --tbl-text: #FFFFFF;
-      --tbl-border: #18688D;
-    }
-    html, body, .stApp, [data-testid="stAppViewContainer"], .main {
-      background-color: #031524 !important;
-      color: #FFFFFF !important;
-    }
-    p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
-      color: #FFFFFF !important;
-    }
-    """
-    chart_template = "plotly_dark"
-    chart_bg = "#00385C"
-    chart_text = "#FFFFFF"
-else:
-    # Light o System: Fondo blanco y texto azul corporativo #00385C
-    theme_css = """
-    :root {
-      color-scheme: light !important;
-      --card-bg: #FFFFFF;
-      --card-border: #E2E8F0;
-      --main-text: #00385C;
-      --sub-text: #18688D;
-      --kpi-title: #00385C;
-      --banner-bg: linear-gradient(135deg, #00385C, #0F4F7F);
-      --badge-bg: #E5F6FF;
-      --badge-border: #00385C;
-      --badge-text: #00385C;
-      --restante-bg: #F0FDF4;
-      --restante-border: #00ACA9;
-      --restante-text: #00ACA9;
-      --notif-bg: #E5F6FF;
-      --notif-border: #00385C;
-      --notif-text: #00385C;
-      --tbl-bg: #FFFFFF;
-      --tbl-text: #00385C;
-      --tbl-border: #CBD5E1;
-    }
-    html, body, .stApp, [data-testid="stAppViewContainer"], .main {
-      background-color: #FFFFFF !important;
-      color: #00385C !important;
-    }
-    p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
-      color: #00385C !important;
-    }
-    """
-    chart_template = "plotly_white"
-    chart_bg = "#FFFFFF"
-    chart_text = "#00385C"
-
-st.markdown(f"""
+st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&display=swap');
 
-{theme_css}
-
-html, body, .stApp {{
+html, body, .stApp {
   font-family: 'Nunito Sans', sans-serif !important;
-}}
-
-/* REGLAS DIRECTAS PARA DATA EDITOR Y TABLAS */
-[data-testid="stDataFrame"], [data-testid="stDataEditor"], div[data-testid="stDataEditor"] > div {{
-  background-color: var(--tbl-bg) !important;
-  color: var(--tbl-text) !important;
-  border: 1px solid var(--tbl-border) !important;
-  border-radius: 8px !important;
-}}
-
-[data-testid="stDataFrame"] table, [data-testid="stDataEditor"] table {{
-  background-color: var(--tbl-bg) !important;
-  color: var(--tbl-text) !important;
-}}
-
-[data-testid="stDataFrame"] th, [data-testid="stDataEditor"] th {{
-  background-color: var(--tbl-bg) !important;
-  color: var(--tbl-text) !important;
-  font-weight: 800 !important;
-  border-bottom: 2px solid var(--tbl-border) !important;
-}}
-
-[data-testid="stDataFrame"] td, [data-testid="stDataEditor"] td {{
-  background-color: var(--tbl-bg) !important;
-  color: var(--tbl-text) !important;
-  border-bottom: 1px solid var(--tbl-border) !important;
-}}
-
-/* Inputs del sistema */
-div[data-baseweb="select"] > div, input {{
-  background-color: var(--tbl-bg) !important;
-  color: var(--tbl-text) !important;
-  border-color: var(--tbl-border) !important;
-}}
+}
 
 /* SIDEBAR ESTILO SAP BYDESIGN COLOR #29AFE2 CON LETRAS BLANCAS */
-[data-testid="stSidebar"], [data-testid="stSidebarContent"] {{
+[data-testid="stSidebar"], [data-testid="stSidebarContent"] {
   background-color: #29afe2 !important;
   border-right: 1.5px solid #1e98c7 !important;
-}}
+}
 
-[data-testid="stSidebar"] * {{
+[data-testid="stSidebar"] * {
   color: #FFFFFF !important;
-}}
+}
 
 [data-testid="stSidebar"] .stSelectbox label, 
 [data-testid="stSidebar"] .stNumberInput label,
 [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
 [data-testid="stSidebar"] span,
-[data-testid="stSidebar"] label {{
+[data-testid="stSidebar"] label {
   color: #FFFFFF !important;
-}}
+}
 
 [data-testid="stSidebar"] div[data-baseweb="select"] > div,
-[data-testid="stSidebar"] input {{
+[data-testid="stSidebar"] input {
   background-color: #FFFFFF !important;
   color: #00385C !important;
   border-color: #FFFFFF !important;
-}}
+}
 
-[data-testid="stSidebar"] div[data-baseweb="select"] * {{
+[data-testid="stSidebar"] div[data-baseweb="select"] * {
   color: #00385C !important;
-}}
+}
 
-.sap-work-center-header {{
+.sap-work-center-header {
   font-size: 0.74rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -466,9 +361,9 @@ div[data-baseweb="select"] > div, input {{
   padding: 8px 4px 4px 4px;
   margin-top: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-}}
+}
 
-[data-testid="stSidebar"] div.stButton > button {{
+[data-testid="stSidebar"] div.stButton > button {
   background-color: rgba(255, 255, 255, 0.18) !important;
   color: #FFFFFF !important;
   border: 1px solid rgba(255, 255, 255, 0.3) !important;
@@ -479,112 +374,103 @@ div[data-baseweb="select"] > div, input {{
   font-size: 0.88rem !important;
   border-radius: 6px !important;
   transition: all 0.2s ease-in-out !important;
-}}
+}
 
-[data-testid="stSidebar"] div.stButton > button:hover {{
+[data-testid="stSidebar"] div.stButton > button:hover {
   background-color: #FFFFFF !important;
   color: #00385C !important;
   border-left: 5px solid #00385C !important;
-}}
+}
 
-[data-testid="stSidebar"] div.stButton > button:hover * {{
+[data-testid="stSidebar"] div.stButton > button:hover * {
   color: #00385C !important;
-}}
+}
 
-.sap-user-card {{
+.sap-user-card {
   background-color: rgba(0, 56, 92, 0.25) !important;
   border: 1.5px solid rgba(255, 255, 255, 0.45) !important;
   border-radius: 8px;
   padding: 10px 12px;
   margin-bottom: 14px;
-}}
+}
 
-.main-header-banner {{
-  background: var(--banner-bg) !important;
+.main-header-banner {
+  background: linear-gradient(135deg, #00385C, #0F4F7F) !important;
   color: #FFFFFF !important;
   padding: 1.4rem 2rem;
   border-radius: 12px;
   margin-bottom: 1.2rem;
   text-align: center !important;
   box-shadow: 0 4px 14px rgba(0, 56, 92, 0.12);
-}}
+}
 
-.main-header-title {{
+.main-header-title {
   font-size: 1.85rem;
   font-weight: 800;
   margin: 0 auto !important;
   text-align: center !important;
   color: #FFFFFF !important;
-}}
+}
 
-.main-header-subtitle {{
+.main-header-subtitle {
   font-size: 0.96rem;
   color: #E2E8F0 !important;
   margin-top: 6px;
   text-align: center !important;
-}}
+}
 
-.kpi-card {{
-  background: var(--card-bg) !important;
-  border: 1.5px solid var(--card-border) !important;
+.kpi-card {
   border-radius: 10px;
   padding: 1rem 0.8rem;
   text-align: center;
   box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-}}
+}
 
-.kpi-card-label {{
+.kpi-card-label {
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--sub-text) !important;
   letter-spacing: 0.5px;
-}}
+}
 
-.kpi-card-value {{
+.kpi-card-value {
   font-size: 1.55rem;
   font-weight: 800;
-  color: var(--kpi-title) !important;
   margin-top: 0.25rem;
-}}
+}
 
-.restante-card {{
-  background: var(--restante-bg) !important;
-  border: 2px solid var(--restante-border) !important;
+.restante-card {
+  border: 2px solid #00ACA9 !important;
   border-radius: 10px;
   padding: 1rem 0.8rem;
   text-align: center;
   box-shadow: 0 2px 6px rgba(0, 172, 169, 0.1);
-}}
+}
 
-.restante-card-label {{
+.restante-card-label {
   font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;
-  color: var(--restante-text) !important;
   letter-spacing: 0.5px;
-}}
+}
 
-.restante-card-value {{
+.restante-card-value {
   font-size: 1.6rem;
   font-weight: 800;
-  color: var(--restante-text) !important;
   margin-top: 0.25rem;
-}}
+}
 
-.section-badge {{
-  background-color: var(--badge-bg) !important;
-  color: var(--badge-text) !important;
+.section-badge {
   font-weight: 800;
   font-size: 0.85rem;
   padding: 6px 12px;
   border-radius: 6px;
   display: inline-block;
   margin-bottom: 0.6rem;
-  border-left: 4px solid var(--badge-border) !important;
-}}
+  border-left: 4px solid #00ACA9 !important;
+}
 
-.bell-badge {{
+.bell-badge {
   background-color: #D74546;
   color: white !important;
   font-weight: 800;
@@ -592,22 +478,15 @@ div[data-baseweb="select"] > div, input {{
   padding: 2px 7px;
   font-size: 0.75rem;
   margin-left: 4px;
-}}
+}
 
-.notif-box {{
-  background-color: var(--notif-bg) !important;
-  border: 1px solid var(--notif-border) !important;
-  border-left: 5px solid var(--notif-border) !important;
-  color: var(--notif-text) !important;
+.notif-box {
   padding: 10px 14px;
   border-radius: 8px;
   margin-bottom: 8px;
   font-weight: 600;
-}}
-
-.notif-box * {{
-  color: var(--notif-text) !important;
-}}
+  border-left: 5px solid #00ACA9;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -641,8 +520,8 @@ all_users = get_all_users()
 if st.session_state.current_user is None or st.session_state.current_user not in all_users:
     st.markdown("""
     <div style='text-align: center; padding: 2.5rem 0 1rem 0;'>
-      <h1 style='color: #00385C !important; font-size: 2.4rem; font-weight: 800; margin: 0;'>💼 OptiBudget Pro</h1>
-      <p style='color: #18688D !important; font-size: 1.05rem; margin-top: 6px;'>Gestión Financiera Multi-Horizonte con Seguridad Avanzada</p>
+      <h1 style='font-size: 2.4rem; font-weight: 800; margin: 0;'>💼 OptiBudget Pro</h1>
+      <p style='font-size: 1.05rem; margin-top: 6px;'>Gestión Financiera Multi-Horizonte con Seguridad Avanzada</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -818,15 +697,6 @@ with st.sidebar:
       </div>
     </div>
     """, unsafe_allow_html=True)
-
-    theme_choice = st.selectbox(
-        "🎨 Tema Visual",
-        ["System", "Light", "Dark"],
-        index=["System", "Light", "Dark"].index(st.session_state.app_theme)
-    )
-    if theme_choice != st.session_state.app_theme:
-        st.session_state.app_theme = theme_choice
-        st.rerun()
 
     with st.expander(f"🔔 Notificaciones y Tareas {f'({notif_count})' if notif_count > 0 else ''}", expanded=(notif_count > 0)):
         if notifications:
@@ -1035,12 +905,9 @@ if menu_selection == "📅 Presupuesto Mensual":
             fig_pie = px.pie(df_pie, names="Categoría", values="Monto", hole=0.55,
                              color_discrete_sequence=["#00385C", "#31B4D1", "#00ACA9"])
         fig_pie.update_layout(
-            template=chart_template,
-            title=dict(text="Distribución 50/30/20 del Mes", x=0.5, xanchor="center", font=dict(color=chart_text, size=14)),
+            title=dict(text="Distribución 50/30/20 del Mes", x=0.5, xanchor="center", font=dict(size=14)),
             margin=dict(t=40, b=10, l=10, r=10),
-            height=250,
-            paper_bgcolor=chart_bg,
-            plot_bgcolor=chart_bg
+            height=250
         )
         st.plotly_chart(fig_pie, use_container_width=True)
         
@@ -1051,21 +918,15 @@ if menu_selection == "📅 Presupuesto Mensual":
             go.Bar(name='Ahorros', x=['Mes'], y=[total_ahorro], marker_color='#00385C')
         ])
         fig_bar.update_layout(
-            template=chart_template,
             barmode='group',
-            title=dict(text="Comparativa Flujo de Caja", x=0.5, xanchor="center", font=dict(color=chart_text, size=14)),
+            title=dict(text="Comparativa Flujo de Caja", x=0.5, xanchor="center", font=dict(size=14)),
             margin=dict(t=40, b=10, l=10, r=10),
-            height=250,
-            paper_bgcolor=chart_bg,
-            plot_bgcolor=chart_bg
+            height=250
         )
         st.plotly_chart(fig_bar, use_container_width=True)
 
     st.markdown("---")
 
-    # ==========================================
-    # DISTRIBUCIÓN EN 2 COLUMNAS DE LAS TABLAS
-    # ==========================================
     col_izq, col_der = st.columns(2)
 
     with col_izq:
@@ -1420,12 +1281,9 @@ elif menu_selection == "📊 Resumen Anual":
         fig_an.add_trace(go.Bar(x=df_annual["Mes"], y=df_annual["Gastos"], name="Gastos", marker_color="#D74546"))
         fig_an.add_trace(go.Bar(x=df_annual["Mes"], y=df_annual["Ahorros"], name="Ahorros", marker_color="#00385C"))
         fig_an.update_layout(
-            template=chart_template,
-            title=dict(text=f"Comportamiento Mes a Mes ({sel_year})", x=0.5, xanchor="center", font=dict(color=chart_text, size=14)),
             barmode='group',
-            height=340,
-            paper_bgcolor=chart_bg,
-            plot_bgcolor=chart_bg
+            title=dict(text=f"Comportamiento Mes a Mes ({sel_year})", x=0.5, xanchor="center", font=dict(size=14)),
+            height=340
         )
         st.plotly_chart(fig_an, use_container_width=True)
         
@@ -1495,10 +1353,7 @@ elif menu_selection == "📈 Horizontes Financieros":
         fig_cp = px.bar(df_cp, x="Periodo", y=["Aporte Acumulado", "Rendimientos / Interés Compuesto"],
                         color_discrete_sequence=["#00385C", "#00ACA9"])
         fig_cp.update_layout(
-            template=chart_template,
-            title=dict(text="Evolución Patrimonial - Corto Plazo", x=0.5, xanchor="center", font=dict(color=chart_text, size=14)),
-            paper_bgcolor=chart_bg,
-            plot_bgcolor=chart_bg
+            title=dict(text="Evolución Patrimonial - Corto Plazo", x=0.5, xanchor="center", font=dict(size=14))
         )
         st.plotly_chart(fig_cp, use_container_width=True)
         st.dataframe(df_cp.style.format({"Aporte Acumulado": "${:,.2f}", "Rendimientos / Interés Compuesto": "${:,.2f}", "Patrimonio Total Estimado": "${:,.2f}"}), use_container_width=True)
@@ -1518,10 +1373,7 @@ elif menu_selection == "📈 Horizontes Financieros":
             
         fig_mp = px.area(df_mp, x="Periodo", y="Patrimonio Total Estimado", color_discrete_sequence=["#00ACA9"])
         fig_mp.update_layout(
-            template=chart_template,
-            title=dict(text="Curva de Crecimiento a 5 Años", x=0.5, xanchor="center", font=dict(color=chart_text, size=14)),
-            paper_bgcolor=chart_bg,
-            plot_bgcolor=chart_bg
+            title=dict(text="Curva de Crecimiento a 5 Años", x=0.5, xanchor="center", font=dict(size=14))
         )
         st.plotly_chart(fig_mp, use_container_width=True)
         st.dataframe(df_mp.style.format({"Aporte Acumulado": "${:,.2f}", "Rendimientos / Interés Compuesto": "${:,.2f}", "Patrimonio Total Estimado": "${:,.2f}"}), use_container_width=True)
@@ -1545,11 +1397,8 @@ elif menu_selection == "📈 Horizontes Financieros":
         fig_lp.add_trace(go.Scatter(x=df_lp["Año"], y=df_lp["Aporte Acumulado"], name="Aporte Acumulado", fill='tozeroy', line=dict(color='#00385C')))
         fig_lp.add_trace(go.Scatter(x=df_lp["Año"], y=df_lp["Patrimonio Total Estimado"], name="Patrimonio Total con Interés Compuesto", fill='tonexty', line=dict(color='#00ACA9')))
         fig_lp.update_layout(
-            template=chart_template,
-            title=dict(text="Efecto Bola de Nieve a Largo Plazo", x=0.5, xanchor="center", font=dict(color=chart_text, size=14)),
-            height=380,
-            paper_bgcolor=chart_bg,
-            plot_bgcolor=chart_bg
+            title=dict(text="Efecto Bola de Nieve a Largo Plazo", x=0.5, xanchor="center", font=dict(size=14)),
+            height=380
         )
         st.plotly_chart(fig_lp, use_container_width=True)
         st.dataframe(df_lp.style.format({"Aporte Acumulado": "${:,.2f}", "Rendimientos / Interés Compuesto": "${:,.2f}", "Patrimonio Total Estimado": "${:,.2f}"}), use_container_width=True)
