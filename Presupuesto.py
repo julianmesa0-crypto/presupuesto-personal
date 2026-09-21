@@ -693,7 +693,7 @@ with st.sidebar:
       <div style='font-size: 1.35rem;'>💼</div>
       <div>
         <div style='font-size: 1.15rem; font-weight: 800; color: #FFFFFF !important; line-height: 1.1;'>OptiBudget Pro</div>
-        <div style='font-size: 0.72rem; color: #FFFFFF !important; text-transform: uppercase; letter-spacing: 0.8px;'>SAP ByDesign Edition</div>
+        <div style='font-size: 0.72rem; color: #FFFFFF !important; text-transform: uppercase; letter-spacing: 0.8px;'>By Julian Mesa</div>
       </div>
     </div>
     """, unsafe_allow_html=True)
