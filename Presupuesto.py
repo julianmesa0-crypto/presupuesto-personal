@@ -14,6 +14,7 @@ import io
 import json
 import os
 import time
+import requests
 
 # ==========================================
 # 1. CONFIGURACIÓN DE PÁGINA
@@ -154,13 +155,29 @@ def append_audit_log(entry):
     logs.append(entry)
     save_json_file(AUDIT_FILE, logs)
 
+@st.cache_data(ttl=3600)
+def fetch_live_trm_rates():
+    try:
+        res = requests.get("https://open.er-api.com/v6/latest/USD", timeout=3)
+        data = res.json()
+        if data and "rates" in data:
+            rates = data["rates"]
+            usd_cop = rates.get("COP", 4100.0)
+            eur_usd = rates.get("EUR", 0.92)
+            eur_cop = usd_cop / eur_usd if eur_usd > 0 else 4450.0
+            return float(usd_cop), float(eur_cop)
+    except Exception:
+        pass
+    return 4100.0, 4450.0
+
 def get_user_settings(email):
     all_settings = load_json_file(SETTINGS_FILE, {})
     if email not in all_settings:
+        live_usd, live_eur = fetch_live_trm_rates()
         all_settings[email] = {
             "currency": "COP",
-            "trm_usd_cop": 4100.0,
-            "trm_eur_cop": 4450.0
+            "trm_usd_cop": live_usd,
+            "trm_eur_cop": live_eur
         }
         save_json_file(SETTINGS_FILE, all_settings)
     return all_settings[email]
@@ -280,7 +297,6 @@ if token_in_url:
     if token_in_url in sessions:
         session_info = sessions[token_in_url]
         elapsed = time.time() - session_info.get("last_activity", 0)
-        # Se amplía el tiempo de inactividad a 300 segundos (5 min) para evitar cierres molestos mientras se opera
         if elapsed > 300:
             destroy_user_session(token_in_url)
             st.session_state.current_user = None
@@ -328,7 +344,7 @@ setTimeout(() => {
 st.markdown(inactivity_and_sync_js, unsafe_allow_html=True)
 
 # ==========================================
-# 4. ESTILOS CSS ADAPTABLES AL TEMA DEL SISTEMA
+# 4. ESTILOS CSS CON BOTONES DE CREAR MES/AÑO ADAPTABLES AL TEMA DEL SISTEMA
 # ==========================================
 st.markdown("""
 <style>
@@ -503,13 +519,14 @@ html, body, .stApp {
   border-left: 5px solid #00ACA9;
 }
 
-/* BOTONES DE CREAR AÑO Y CREAR MES ADAPTABLES AL TEMA DEL SISTEMA (STREAMLIT CSS MEDIA QUERY O SOPORTE NATIVO) */
+/* BOTONES DE CREAR MES Y AÑO SEGÚN TEMA DEL SISTEMA */
 @media (prefers-color-scheme: light) {
   div[data-testid="stForm"] button[kind="secondary"], div[data-testid="stForm"] button[kind="primary"] {
     background-color: #FFFFFF !important;
     color: #00385C !important;
-    border: 1.5px solid #00385C !important;
-    box-shadow: 0 4px 10px rgba(0, 56, 92, 0.15) !important;
+    border: 1.5px solid #29afe2 !important;
+    box-shadow: 0 4px 12px rgba(41, 175, 226, 0.35) !important;
+    font-weight: 800 !important;
   }
 }
 @media (prefers-color-scheme: dark) {
@@ -517,7 +534,8 @@ html, body, .stApp {
     background-color: #00385C !important;
     color: #FFFFFF !important;
     border: 1.5px solid #FFFFFF !important;
-    box-shadow: 0 4px 10px rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.25) !important;
+    font-weight: 800 !important;
   }
 }
 </style>
@@ -752,8 +770,17 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # CONFIGURACIÓN DE MONEDA PRINCIPAL Y TRM EN EL SIDEBAR (MOSTRADA SEGÚN LA MONEDA PRINCIPAL SELECCIONADA)
+    # CONFIGURACIÓN DE MONEDA PRINCIPAL Y TRM EN EL SIDEBAR (AUTOMÁTICA O MANUAL)
     st.markdown("<div class='sap-work-center-header'>Configuración Monetaria & TRM</div>", unsafe_allow_html=True)
+    
+    if st.button("🌐 Sincronizar TRM de Internet", use_container_width=True):
+        live_u, live_e = fetch_live_trm_rates()
+        user_sets["trm_usd_cop"] = live_u
+        user_sets["trm_eur_cop"] = live_e
+        save_user_settings(current_email, user_sets)
+        st.success("¡TRM sincronizada en línea!")
+        st.rerun()
+
     with st.form("form_currency_settings"):
         curr_options = ["COP", "USD", "EUR"]
         selected_curr = st.selectbox("Moneda Principal", curr_options, index=curr_options.index(user_sets.get("currency", "COP")))
@@ -761,16 +788,16 @@ with st.sidebar:
         trm_usd = st.number_input("TRM USD a COP", value=float(user_sets.get("trm_usd_cop", 4100.0)), step=10.0)
         trm_eur = st.number_input("TRM EUR a COP", value=float(user_sets.get("trm_eur_cop", 4450.0)), step=10.0)
         
-        btn_save_sets = st.form_submit_button("Actualizar Divisa / TRM", use_container_width=True)
+        btn_save_sets = st.form_submit_button("Actualizar Divisa", use_container_width=True)
         if btn_save_sets:
             user_sets["currency"] = selected_curr
             user_sets["trm_usd_cop"] = trm_usd
             user_sets["trm_eur_cop"] = trm_eur
             save_user_settings(current_email, user_sets)
-            st.success("Moneda principal y TRM actualizadas.")
+            st.success("Moneda principal actualizada.")
             st.rerun()
 
-    # Indicador dinámico de TRM según la moneda principal (COP -> USD/EUR; USD -> COP/EUR; EUR -> COP/USD)
+    # Indicador dinámico de TRM adaptado a la moneda principal seleccionada
     main_curr = user_sets.get("currency", "COP")
     u_val = user_sets.get('trm_usd_cop', 4100)
     e_val = user_sets.get('trm_eur_cop', 4450)
@@ -781,14 +808,14 @@ with st.sidebar:
         eur_vs_usd = (e_val / u_val) if u_val > 0 else 1.08
         cop_vs_usd = (1.0 / u_val) if u_val > 0 else 0.00024
         trm_display_html = f"1 USD = ${u_val:,.1f} COP<br>1 EUR = ${eur_vs_usd:,.2f} USD<br>1 COP = ${cop_vs_usd:,.5f} USD"
-    else: # EUR
+    else:
         usd_vs_eur = (u_val / e_val) if e_val > 0 else 0.92
         cop_vs_eur = (1.0 / e_val) if e_val > 0 else 0.00022
         trm_display_html = f"1 EUR = ${e_val:,.1f} COP<br>1 USD = ${usd_vs_eur:,.2f} EUR<br>1 COP = ${cop_vs_eur:,.5f} EUR"
 
     st.markdown(f"""
     <div style='background: rgba(255,255,255,0.12); padding: 8px; border-radius: 6px; font-size: 0.8rem; margin-top: 6px; text-align: center;'>
-      <b>TRM Activa del Día ({main_curr}):</b><br>
+      <b>Relación TRM ({main_curr}):</b><br>
       {trm_display_html}
     </div>
     """, unsafe_allow_html=True)
@@ -885,6 +912,27 @@ with st.sidebar:
         st.caption("✅ Todos los meses de este año están creados.")
 
     st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
+    if st.button("🗑️ Eliminar Mes Activo", use_container_width=True):
+        if len(months_in_active_year) <= 1:
+            st.error("No puedes eliminar el único mes restante del año.")
+        else:
+            del user_fin[sel_year][sel_month]
+            all_finances[current_email] = user_fin
+            save_all_finances(all_finances)
+            st.success(f"Mes {sel_month} eliminado correctamente.")
+            st.rerun()
+
+    if st.button("🗑️ Eliminar Año Activo", use_container_width=True):
+        if len(created_years) <= 1:
+            st.error("No puedes eliminar el único año fiscal existente.")
+        else:
+            del user_fin[sel_year]
+            all_finances[current_email] = user_fin
+            save_all_finances(all_finances)
+            st.success(f"Año {sel_year} eliminado correctamente.")
+            st.rerun()
+
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
     if st.button("🚪 Cerrar Sesión", use_container_width=True):
         token_active = st.query_params.get("session_token", None)
         if token_active:
@@ -914,7 +962,6 @@ def convert_to_main_currency(amount, transaction_currency, sets):
         return amount_in_cop / trm_eur if trm_eur > 0 else amount_in_cop
     return amount_in_cop
 
-# Si la moneda principal es COP, quitar centavos (redondear a entero absoluto). Si es USD o EUR, permitir dos decimales.
 def format_money(val, curr_code):
     if curr_code == "COP":
         return f"${int(round(val)):,}"
@@ -928,7 +975,7 @@ curr_code = user_sets.get("currency", "COP")
 curr_symbol = {"COP": "$", "USD": "US$", "EUR": "€"}.get(curr_code, "$")
 
 # ==========================================
-# 8. VISTA: PRESUPUESTO MENSUAL (REACTIVO & TRM & FECHA)
+# 8. VISTA: PRESUPUESTO MENSUAL (REACTIVO & TRM & FECHA & EXPORTACIÓN & ELIMINAR MES/AÑO)
 # ==========================================
 if menu_selection == "📅 Presupuesto Mensual":
     raw_month = user_fin[sel_year][sel_month]
@@ -944,7 +991,7 @@ if menu_selection == "📅 Presupuesto Mensual":
     df_ah = pd.DataFrame(raw_month.get("ahorros", []))
     df_seg = pd.DataFrame(raw_month.get("seguimiento", []))
     if df_seg.empty:
-        df_seg = pd.DataFrame(columns=["Monto", "Categoría", "Fecha", "Detalle", "Moneda"])
+        df_seg = pd.DataFrame(columns=["Monto", "Categoría", "Fecha", "Detalle", "Moneda", "FechaTransaccion"])
         
     total_ingreso_act = float(df_ing["Actual"].sum()) if not df_ing.empty and "Actual" in df_ing.columns else 0.0
     total_facturas = float(df_fac["Monto"].sum()) if not df_fac.empty and "Monto" in df_fac.columns else 0.0
@@ -1002,6 +1049,79 @@ if menu_selection == "📅 Presupuesto Mensual":
         
     st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
     
+    # ------------------------------------------
+    # BOTÓN DE EXPORTACIÓN A EXCEL (XLSX) Y CSV
+    # ------------------------------------------
+    with st.expander("📥 Exportar Información Financiera (Excel / CSV)"):
+        with st.form("form_export_data"):
+            exp_scope = st.selectbox("Alcance de Exportación", ["Mes Actual (" + sel_month + " " + sel_year + ")", "Todo el Año (" + sel_year + ")", "Historial Completo"])
+            exp_format = st.selectbox("Formato de Archivo", ["Excel (.xlsx)", "CSV (.csv)"])
+            btn_export = st.form_submit_button("Generar Archivo de Exportación", use_container_width=True)
+            
+            if btn_export:
+                export_dfs = {}
+                if "Mes Actual" in exp_scope:
+                    export_dfs["Ingresos"] = df_ing
+                    export_dfs["Facturas"] = df_fac
+                    export_dfs["Gastos Variables"] = df_var
+                    export_dfs["Ahorros"] = df_ah
+                    export_dfs["Seguimiento Diario"] = df_seg
+                elif "Todo el Año" in exp_scope:
+                    combined_ing, combined_fac, combined_var, combined_ah, combined_seg = [], [], [], [], []
+                    for m_name in months_in_active_year:
+                        m_data = user_fin[sel_year][m_name]
+                        if m_data.get("ingresos"):
+                            for r in m_data["ingresos"]:
+                                combined_ing.append(dict(r, Mes=m_name))
+                        if m_data.get("facturas"):
+                            for r in m_data["facturas"]:
+                                combined_fac.append(dict(r, Mes=m_name))
+                        if m_data.get("gastos_var"):
+                            for r in m_data["gastos_var"]:
+                                combined_var.append(dict(r, Mes=m_name))
+                        if m_data.get("ahorros"):
+                            for r in m_data["ahorros"]:
+                                combined_ah.append(dict(r, Mes=m_name))
+                        if m_data.get("seguimiento"):
+                            for r in m_data["seguimiento"]:
+                                combined_seg.append(dict(r, Mes=m_name))
+                    export_dfs["Ingresos Anuales"] = pd.DataFrame(combined_ing)
+                    export_dfs["Facturas Anuales"] = pd.DataFrame(combined_fac)
+                    export_dfs["Gastos Anuales"] = pd.DataFrame(combined_var)
+                    export_dfs["Ahorros Anuales"] = pd.DataFrame(combined_ah)
+                    export_dfs["Seguimiento Anual"] = pd.DataFrame(combined_seg)
+                else:
+                    all_hist = []
+                    for y_key, y_val in user_fin.items():
+                        for m_key, m_val in y_val.items():
+                            if m_val.get("facturas"):
+                                for r in m_val["facturas"]:
+                                    all_hist.append(dict(r, Año=y_key, Mes=m_key))
+                    export_dfs["Historial Completo Facturas"] = pd.DataFrame(all_hist)
+
+                if "Excel" in exp_format:
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                        for sheet_name, dframe in export_dfs.items():
+                            if not dframe.empty:
+                                dframe.to_excel(writer, sheet_name=sheet_name[:31], index=False)
+                    processed_data = output.getvalue()
+                    st.download_button(
+                        label="⬇️ Descargar Archivo Excel (.xlsx)",
+                        data=processed_data,
+                        file_name=f"OptiBudget_Pro_Export_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                else:
+                    first_df = list(export_dfs.values())[0] if export_dfs else pd.DataFrame()
+                    csv_data = first_df.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="⬇️ Descargar Archivo CSV (.csv)",
+                        data=csv_data,
+                        file_name=f"OptiBudget_Pro_Export_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                        mime="text/csv"
+                    )
+
     g_col1, g_col2 = st.columns(2)
     with g_col1:
         df_pie = pd.DataFrame({
@@ -1075,8 +1195,6 @@ if menu_selection == "📅 Presupuesto Mensual":
                     tx_curr = st.selectbox("Moneda de Transacción", ["COP", "USD", "EUR"], key="fac_tx_curr")
                 
                 new_f_tipo = st.selectbox("Clasificación 50/30/20", ["Necesidades", "Deseos"])
-                
-                # Selección de fecha de la transacción
                 trans_date = st.date_input("Fecha de la Transacción", value=datetime.now())
                 
                 btn_add_f = st.form_submit_button("Agregar Factura con TRM", use_container_width=True)
@@ -1312,7 +1430,7 @@ if menu_selection == "📅 Presupuesto Mensual":
     st.markdown("---")
 
     # ==========================================
-    # SECCIÓN 5: SEGUIMIENTO DE TRANSACCIONES (2 COLUMNAS)
+    # SECCIÓN 5: SEGUIMIENTO DE TRANSACCIONES (2 COLUMNAS + LÁPIZ EDICIÓN/ELIMINACIÓN)
     # ==========================================
     st.markdown("<div class='section-badge'>📝 5. SEGUIMIENTO DE GASTOS DIARIOS</div>", unsafe_allow_html=True)
     col_tx_list, col_tx_form = st.columns([1.3, 1])
@@ -1324,6 +1442,46 @@ if menu_selection == "📅 Presupuesto Mensual":
             st.dataframe(df_seg_disp, use_container_width=True)
         else:
             st.info("Aún no has registrado transacciones diarias este mes.")
+
+        # Lápiz de edición y eliminación para Seguimiento de Gastos Diarios
+        with st.expander("✏️ Lápiz de Edición / Eliminación: Gasto Diario"):
+            if not df_seg.empty:
+                seg_options = [f"{idx} - [{row.get('FechaTransaccion', 'N/A')}] {row['Categoría']}: {format_money(row['Monto'], curr_code)}" for idx, row in df_seg.iterrows()]
+                selected_seg_idx = st.selectbox("Seleccione transacción", options=range(len(seg_options)), format_func=lambda x: seg_options[x], key=f"sel_seg_{sel_year}_{sel_month}")
+                
+                current_seg = df_seg.iloc[selected_seg_idx]
+                with st.form(f"form_edit_seg_{sel_year}_{sel_month}"):
+                    edit_seg_monto = st.number_input(f"Monto ({curr_code})", min_value=0.0, value=float(current_seg["Monto"]), step=5.0, format="%.2f")
+                    edit_seg_cat = st.text_input("Categoría", value=current_seg["Categoría"])
+                    edit_seg_det = st.text_input("Detalle", value=str(current_seg.get("Detalle", "")))
+                    
+                    c_s_save, c_s_del = st.columns(2)
+                    with c_s_save:
+                        btn_save_seg = st.form_submit_button("💾 Guardar", use_container_width=True)
+                    with c_s_del:
+                        btn_del_seg = st.form_submit_button("🗑️ Eliminar Gasto", use_container_width=True)
+                        
+                    if btn_save_seg:
+                        df_seg.at[selected_seg_idx, "Monto"] = edit_seg_monto
+                        df_seg.at[selected_seg_idx, "Categoría"] = edit_seg_cat
+                        df_seg.at[selected_seg_idx, "Detalle"] = edit_seg_det
+                        raw_month["seguimiento"] = df_seg.to_dict(orient="records")
+                        user_fin[sel_year][sel_month] = raw_month
+                        all_finances[current_email] = user_fin
+                        save_all_finances(all_finances)
+                        st.success("Gasto diario actualizado.")
+                        st.rerun()
+                        
+                    if btn_del_seg:
+                        df_seg = df_seg.drop(index=selected_seg_idx).reset_index(drop=True)
+                        raw_month["seguimiento"] = df_seg.to_dict(orient="records")
+                        user_fin[sel_year][sel_month] = raw_month
+                        all_finances[current_email] = user_fin
+                        save_all_finances(all_finances)
+                        st.success("Gasto diario eliminado.")
+                        st.rerun()
+            else:
+                st.info("Sin transacciones para editar.")
 
     with col_tx_form:
         with st.form(f"form_add_seg_{sel_year}_{sel_month}"):
