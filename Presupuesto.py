@@ -23,7 +23,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# 2. ESTILOS CSS - SAP BYDESIGN SIDEBAR & TÍTULOS CENTRADOS
+# 2. ESTILOS CSS - SIDEBAR COLOR #29AFE2 CON LETRAS BLANCAS
 # ==========================================
 st.markdown("""
 <style>
@@ -49,8 +49,8 @@ st.markdown("""
   --color-border-subtle: #CBD5E1;
 }
 
-/* BLANCO TOTAL EN TODA LA PÁGINA */
-html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stSidebarContent"], .main {
+/* BLANCO TOTAL EN EL CUERPO DE LA PÁGINA */
+html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {
   font-family: var(--font-family-base) !important;
   background-color: #FFFFFF !important;
   color: #1E293B !important;
@@ -60,58 +60,76 @@ p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
   color: #1E293B !important;
 }
 
-/* SIDEBAR ESTILO SAP BUSINESS BYDESIGN */
-[data-testid="stSidebar"] {
-  background-color: #0A273D !important;
-  border-right: 1.5px solid #061B2B !important;
+/* SIDEBAR ESTILO SAP BYDESIGN COLOR #29AFE2 CON LETRAS BLANCAS */
+[data-testid="stSidebar"], [data-testid="stSidebarContent"] {
+  background-color: #29afe2 !important;
+  border-right: 1.5px solid #1e98c7 !important;
 }
 
 [data-testid="stSidebar"] * {
-  color: #E2E8F0 !important;
+  color: #FFFFFF !important;
 }
 
 [data-testid="stSidebar"] .stSelectbox label, 
 [data-testid="stSidebar"] .stNumberInput label,
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
-  color: #CBD5E1 !important;
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] label {
+  color: #FFFFFF !important;
 }
 
-/* Encabezados y títulos de centros de trabajo ByDesign */
+/* Inputs y selectores dentro del sidebar para mantener legibilidad */
+[data-testid="stSidebar"] div[data-baseweb="select"] > div,
+[data-testid="stSidebar"] input {
+  background-color: #FFFFFF !important;
+  color: #1E293B !important;
+  border-color: #FFFFFF !important;
+}
+
+[data-testid="stSidebar"] div[data-baseweb="select"] * {
+  color: #1E293B !important;
+}
+
+/* Encabezados y títulos de centros de trabajo */
 .sap-work-center-header {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 800;
   text-transform: uppercase;
-  color: #94A3B8 !important;
+  color: #FFFFFF !important;
   letter-spacing: 1.2px;
   padding: 8px 4px 4px 4px;
   margin-top: 10px;
-  border-bottom: 1px solid #1E3A52;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-/* Botones de navegación ByDesign en Sidebar */
+/* Botones de navegación en Sidebar */
 [data-testid="stSidebar"] div.stButton > button {
-  background-color: transparent !important;
-  color: #CBD5E1 !important;
-  border: 1px solid transparent !important;
+  background-color: rgba(255, 255, 255, 0.18) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
   text-align: left !important;
   justify-content: flex-start !important;
   padding: 8px 12px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   font-size: 0.88rem !important;
   border-radius: 6px !important;
   transition: all 0.2s ease-in-out !important;
 }
 
 [data-testid="stSidebar"] div.stButton > button:hover {
-  background-color: #133E5E !important;
-  color: #FFFFFF !important;
-  border-left: 4px solid #00ACA9 !important;
+  background-color: #FFFFFF !important;
+  color: #00385C !important;
+  border-left: 5px solid #00385C !important;
 }
 
-/* Tarjeta de usuario en el sidebar ByDesign */
+[data-testid="stSidebar"] div.stButton > button:hover * {
+  color: #00385C !important;
+}
+
+/* Tarjeta de usuario en el sidebar */
 .sap-user-card {
-  background-color: #10324D !important;
-  border: 1px solid #1E476B !important;
+  background-color: rgba(0, 56, 92, 0.25) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.45) !important;
   border-radius: 8px;
   padding: 10px 12px;
   margin-bottom: 14px;
@@ -427,22 +445,24 @@ init_user_finances(current_email)
 user_fin = st.session_state.finances[current_email]
 
 with st.sidebar:
+    # Encabezado ByDesign
     st.markdown("""
     <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 4px;'>
       <div style='font-size: 1.35rem;'>💼</div>
       <div>
         <div style='font-size: 1.15rem; font-weight: 800; color: #FFFFFF !important; line-height: 1.1;'>OptiBudget Pro</div>
-        <div style='font-size: 0.72rem; color: #94A3B8 !important; text-transform: uppercase; letter-spacing: 0.8px;'>SAP ByDesign Edition</div>
+        <div style='font-size: 0.72rem; color: #FFFFFF !important; text-transform: uppercase; letter-spacing: 0.8px;'>SAP ByDesign Edition</div>
       </div>
     </div>
     """, unsafe_allow_html=True)
 
+    # Tarjeta de Usuario Activo
     st.markdown(f"""
     <div class='sap-user-card'>
-      <div style='font-size: 0.68rem; color: #94A3B8 !important; font-weight: 800; text-transform: uppercase;'>Usuario Activo</div>
+      <div style='font-size: 0.68rem; color: #FFFFFF !important; font-weight: 800; text-transform: uppercase;'>Usuario Activo</div>
       <div style='font-size: 0.98rem; color: #FFFFFF !important; font-weight: 800;'>{user_info['name']}</div>
-      <div style='font-size: 0.78rem; color: #CBD5E1 !important;'>{current_email}</div>
-      <div style='margin-top: 5px;'><span style='background: #00ACA9; color: #FFFFFF !important; padding: 2px 7px; border-radius: 4px; font-size: 0.68rem; font-weight: 800;'>{user_info['role']}</span></div>
+      <div style='font-size: 0.78rem; color: #FFFFFF !important;'>{current_email}</div>
+      <div style='margin-top: 5px;'><span style='background: #00385C; color: #FFFFFF !important; padding: 2px 7px; border-radius: 4px; font-size: 0.68rem; font-weight: 800;'>{user_info['role']}</span></div>
     </div>
     """, unsafe_allow_html=True)
 
