@@ -23,9 +23,9 @@ st.set_page_config(
 )
 
 # ==========================================
-# 2. ESTILOS CSS - FONDO BLANCO Y ALTO CONTRASTE
+# 2. ESTILOS CSS - SAP BYDESIGN SIDEBAR & TÍTULOS CENTRADOS
 # ==========================================
-st.markdown('''
+st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&display=swap');
 
@@ -49,46 +49,101 @@ st.markdown('''
   --color-border-subtle: #CBD5E1;
 }
 
-/* BLANCO TOTAL EN TODA LA PÁGINA Y SIDEBAR */
-html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stSidebar"], [data-testid="stSidebarContent"], .main {
+/* BLANCO TOTAL EN TODA LA PÁGINA */
+html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stSidebarContent"], .main {
   font-family: var(--font-family-base) !important;
   background-color: #FFFFFF !important;
   color: #1E293B !important;
 }
 
-/* Forzar textos oscuros */
 p, span, label, h1, h2, h3, h4, h5, h6, [data-testid="stMarkdownContainer"] p {
   color: #1E293B !important;
 }
 
-/* Barra lateral */
+/* SIDEBAR ESTILO SAP BUSINESS BYDESIGN */
 [data-testid="stSidebar"] {
-  background-color: #F8FAFC !important;
-  border-right: 1.5px solid #E2E8F0 !important;
+  background-color: #0A273D !important;
+  border-right: 1.5px solid #061B2B !important;
 }
 
+[data-testid="stSidebar"] * {
+  color: #E2E8F0 !important;
+}
+
+[data-testid="stSidebar"] .stSelectbox label, 
+[data-testid="stSidebar"] .stNumberInput label,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+  color: #CBD5E1 !important;
+}
+
+/* Encabezados y títulos de centros de trabajo ByDesign */
+.sap-work-center-header {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #94A3B8 !important;
+  letter-spacing: 1.2px;
+  padding: 8px 4px 4px 4px;
+  margin-top: 10px;
+  border-bottom: 1px solid #1E3A52;
+}
+
+/* Botones de navegación ByDesign en Sidebar */
+[data-testid="stSidebar"] div.stButton > button {
+  background-color: transparent !important;
+  color: #CBD5E1 !important;
+  border: 1px solid transparent !important;
+  text-align: left !important;
+  justify-content: flex-start !important;
+  padding: 8px 12px !important;
+  font-weight: 600 !important;
+  font-size: 0.88rem !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+[data-testid="stSidebar"] div.stButton > button:hover {
+  background-color: #133E5E !important;
+  color: #FFFFFF !important;
+  border-left: 4px solid #00ACA9 !important;
+}
+
+/* Tarjeta de usuario en el sidebar ByDesign */
+.sap-user-card {
+  background-color: #10324D !important;
+  border: 1px solid #1E476B !important;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+
+/* BANNER DE CABECERA CON TÍTULOS TOTALMENTE CENTRADOS */
 .main-header-banner {
   background: linear-gradient(135deg, #00385C, #0F4F7F) !important;
   color: #FFFFFF !important;
-  padding: 1.2rem 1.8rem;
+  padding: 1.4rem 2rem;
   border-radius: 12px;
-  margin-bottom: 1.2rem;
+  margin-bottom: 1.4rem;
+  text-align: center !important;
   box-shadow: 0 4px 14px rgba(0, 56, 92, 0.1);
 }
 
 .main-header-title {
-  font-size: 1.7rem;
+  font-size: 1.85rem;
   font-weight: 800;
-  margin: 0;
+  margin: 0 auto !important;
+  text-align: center !important;
   color: #FFFFFF !important;
 }
 
 .main-header-subtitle {
-  font-size: 0.92rem;
+  font-size: 0.96rem;
   color: #E2E8F0 !important;
-  margin-top: 4px;
+  margin-top: 6px;
+  text-align: center !important;
 }
 
+/* Tarjetas KPI y Dinero Restante */
 .kpi-card {
   background: #FFFFFF !important;
   border: 1.5px solid #E2E8F0 !important;
@@ -161,7 +216,7 @@ div[data-baseweb="select"] > div, input {
   border-color: #CBD5E1 !important;
 }
 </style>
-''', unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # ==========================================
 # 3. SEGURIDAD Y GESTIÓN DE SESIONES
@@ -180,7 +235,6 @@ CHRONO_MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
                  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
 def create_initial_example_month():
-    """Crea un mes con solo 1 fila de ejemplo por concepto, sin presupuesto y con valores en 0.0"""
     return {
         "ingresos": pd.DataFrame([
             {"Check": False, "Descripción": "Salario / Ingreso Principal", "Actual": 0.0}
@@ -198,7 +252,6 @@ def create_initial_example_month():
     }
 
 def clone_structure_from_month(source_month_data):
-    """Clona la lista de conceptos del mes previo reiniciando los valores a 0.0"""
     new_ing = source_month_data["ingresos"].copy()
     if "Presupuesto" in new_ing.columns:
         new_ing = new_ing.drop(columns=["Presupuesto"])
@@ -224,7 +277,7 @@ def clone_structure_from_month(source_month_data):
         "seguimiento": new_seg
     }
 
-DATA_VERSION = "v6_fixed_title_arg"
+DATA_VERSION = "v7_sap_bydesign_ui"
 
 def init_system_state():
     if "data_schema_version" not in st.session_state or st.session_state.data_schema_version != DATA_VERSION:
@@ -256,6 +309,8 @@ def init_system_state():
         st.session_state.finances = {}
     if "current_user" not in st.session_state:
         st.session_state.current_user = None
+    if "active_module" not in st.session_state:
+        st.session_state.active_module = "📅 Presupuesto Mensual"
     if "audit_log" not in st.session_state:
         st.session_state.audit_log = []
     if "smtp_config" not in st.session_state:
@@ -291,12 +346,12 @@ def send_security_alert(target_email, event_type, details):
 # 4. PANTALLA DE ACCESO (LOGIN & REGISTRO)
 # ==========================================
 if st.session_state.current_user is None:
-    st.markdown('''
+    st.markdown("""
     <div style='text-align: center; padding: 2.5rem 0 1rem 0;'>
       <h1 style='color: #00385C !important; font-size: 2.4rem; font-weight: 800; margin: 0;'>💼 OptiBudget Pro</h1>
       <p style='color: #18688D !important; font-size: 1.05rem; margin-top: 6px;'>Gestión Financiera Multi-Horizonte con Seguridad Avanzada</p>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     col_l, col_c, col_r = st.columns([1, 1.4, 1])
     with col_c:
@@ -362,7 +417,7 @@ if st.session_state.current_user is None:
     st.stop()
 
 # ==========================================
-# 5. MENÚ LATERAL Y NAVEGACIÓN
+# 5. MENÚ LATERAL ESTILO SAP BYDESIGN
 # ==========================================
 current_email = st.session_state.current_user
 user_info = st.session_state.users[current_email]
@@ -372,32 +427,62 @@ init_user_finances(current_email)
 user_fin = st.session_state.finances[current_email]
 
 with st.sidebar:
-    st.markdown('''
-    <div style='text-align: center; margin-bottom: 0.8rem;'>
-      <div style='font-size: 1.35rem; font-weight: 800; color: #00385C;'>💼 OptiBudget Pro</div>
-      <div style='font-size: 0.82rem; color: #18688D;'>Finanzas Inteligentes Año a Año</div>
+    st.markdown("""
+    <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 4px;'>
+      <div style='font-size: 1.35rem;'>💼</div>
+      <div>
+        <div style='font-size: 1.15rem; font-weight: 800; color: #FFFFFF !important; line-height: 1.1;'>OptiBudget Pro</div>
+        <div style='font-size: 0.72rem; color: #94A3B8 !important; text-transform: uppercase; letter-spacing: 0.8px;'>SAP ByDesign Edition</div>
+      </div>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-    st.markdown(f'''
-    <div style='background: #FFFFFF; border: 1.5px solid #A0DFF7; padding: 12px; border-radius: 8px; margin-bottom: 1rem;'>
-      <div style='font-size: 0.78rem; color: #0A405F; font-weight: 700;'>USUARIO ACTIVO</div>
-      <div style='font-size: 1.05rem; color: #00385C; font-weight: 700;'>{user_info['name']}</div>
-      <div style='font-size: 0.82rem; color: #18688D;'>{current_email}</div>
-      <span style='background: #00385C; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;'>{user_info['role']}</span>
+    st.markdown(f"""
+    <div class='sap-user-card'>
+      <div style='font-size: 0.68rem; color: #94A3B8 !important; font-weight: 800; text-transform: uppercase;'>Usuario Activo</div>
+      <div style='font-size: 0.98rem; color: #FFFFFF !important; font-weight: 800;'>{user_info['name']}</div>
+      <div style='font-size: 0.78rem; color: #CBD5E1 !important;'>{current_email}</div>
+      <div style='margin-top: 5px;'><span style='background: #00ACA9; color: #FFFFFF !important; padding: 2px 7px; border-radius: 4px; font-size: 0.68rem; font-weight: 800;'>{user_info['role']}</span></div>
     </div>
-    ''', unsafe_allow_html=True)
-    
-    # GESTIÓN DE AÑOS
-    st.markdown("### 📅 Gestión de Años")
+    """, unsafe_allow_html=True)
+
+    # 1. MÓDULOS DE TRABAJO (ARRIBA)
+    st.markdown("<div class='sap-work-center-header'>Centro de Trabajo (Módulos)</div>", unsafe_allow_html=True)
+
+    module_list = [
+        ("📅 Presupuesto Mensual", "Ejecución y Gestión"),
+        ("📊 Resumen Anual", "Consolidado Fiscal"),
+        ("📈 Horizontes Financieros", "Proyección 3, 5, 10+ Años")
+    ]
+    if is_admin:
+        module_list.append(("👑 Panel de Administración", "Control Superusuario"))
+
+    for mod_name, mod_desc in module_list:
+        is_active = (st.session_state.active_module == mod_name)
+        prefix = "▶ " if is_active else "  "
+        if st.button(f"{prefix}{mod_name}", key=f"nav_btn_{mod_name}", use_container_width=True):
+            st.session_state.active_module = mod_name
+            st.rerun()
+
+    menu_selection = st.session_state.active_module
+
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
+    # 2. GESTIÓN DE AÑOS Y MESES (DEBAJO DE LOS MÓDULOS)
+    st.markdown("<div class='sap-work-center-header'>Período Fiscal & Parámetros</div>", unsafe_allow_html=True)
+
     created_years = sorted(list(user_fin.keys()))
-    sel_year = st.selectbox("Año Fiscal Activo", created_years, index=len(created_years)-1)
+    if "current_sel_year" not in st.session_state or st.session_state.current_sel_year not in created_years:
+        st.session_state.current_sel_year = created_years[-1]
     
+    sel_year = st.selectbox("Año Fiscal Activo", created_years, index=created_years.index(st.session_state.current_sel_year))
+    st.session_state.current_sel_year = sel_year
+
     with st.expander("➕ Crear Nuevo Año"):
         with st.form("form_create_year"):
             next_suggested_year = max(created_years) + 1 if created_years else 2026
             new_year_input = st.number_input("Año a crear", min_value=2020, max_value=2099, value=next_suggested_year, step=1)
-            btn_create_year = st.form_submit_button("Crear Año (con Enero)")
+            btn_create_year = st.form_submit_button("Crear Año (con Enero)", use_container_width=True)
             
             if btn_create_year:
                 if new_year_input in user_fin:
@@ -406,48 +491,41 @@ with st.sidebar:
                     user_fin[new_year_input] = {
                         "Enero": create_initial_example_month()
                     }
-                    st.success(f"¡Año {new_year_input} creado exitosamente con Enero inicializado!")
+                    st.session_state.current_sel_year = new_year_input
+                    st.success(f"¡Año {new_year_input} creado!")
                     st.rerun()
 
-    # GESTIÓN DE MESES
-    st.markdown("### 🗓️ Gestión de Meses")
     months_in_active_year = [m for m in CHRONO_MONTHS if m in user_fin[sel_year]]
     if not months_in_active_year:
         user_fin[sel_year]["Enero"] = create_initial_example_month()
         months_in_active_year = ["Enero"]
-        
-    sel_month = st.selectbox("Mes Activo", months_in_active_year, index=len(months_in_active_year)-1)
-    
+
+    if "current_sel_month" not in st.session_state or st.session_state.current_sel_month not in months_in_active_year:
+        st.session_state.current_sel_month = months_in_active_year[-1]
+
+    sel_month = st.selectbox("Mes Activo", months_in_active_year, index=months_in_active_year.index(st.session_state.current_sel_month))
+    st.session_state.current_sel_month = sel_month
+
     uncreated_months = [m for m in CHRONO_MONTHS if m not in months_in_active_year]
     if uncreated_months:
         with st.expander("➕ Crear Nuevo Mes"):
             with st.form("form_create_month"):
                 st.caption("Copia la lista de conceptos del mes previo con los valores en 0.0.")
-                next_month_to_create = st.selectbox("Seleccione el mes a crear", uncreated_months, index=0)
+                next_month_to_create = st.selectbox("Mes a crear", uncreated_months, index=0)
                 clone_from = st.selectbox("Traer campos de:", months_in_active_year, index=len(months_in_active_year)-1)
-                btn_create_month = st.form_submit_button(f"Crear {next_month_to_create}")
+                btn_create_month = st.form_submit_button(f"Crear {next_month_to_create}", use_container_width=True)
                 
                 if btn_create_month:
                     source_data = user_fin[sel_year][clone_from]
                     user_fin[sel_year][next_month_to_create] = clone_structure_from_month(source_data)
-                    st.success(f"¡Mes {next_month_to_create} creado trayendo los campos de {clone_from}!")
+                    st.session_state.current_sel_month = next_month_to_create
+                    st.success(f"¡Mes {next_month_to_create} creado!")
                     st.rerun()
     else:
-        st.caption("✅ Todos los meses de este año han sido creados.")
+        st.caption("✅ Todos los meses de este año están creados.")
 
-    st.markdown("---")
-    nav_options = [
-        "📅 Presupuesto Mensual",
-        "📊 Resumen Anual",
-        "📈 Horizontes Financieros (3, 5, 10+ Años)"
-    ]
-    if is_admin:
-        nav_options.append("👑 Panel de Administración")
-        
-    menu_selection = st.radio("Módulos", nav_options)
-    
-    st.markdown("---")
-    if st.button("Cerrar Sesión", use_container_width=True):
+    st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
+    if st.button("🚪 Cerrar Sesión", use_container_width=True):
         st.session_state.current_user = None
         st.rerun()
 
@@ -477,46 +555,47 @@ if menu_selection == "📅 Presupuesto Mensual":
     var_des = data_m["gastos_var"][data_m["gastos_var"]["Tipo"] == "Deseos"]["Monto"].sum() if not data_m["gastos_var"].empty else 0.0
     des_total = fac_des + var_des
     
-    st.markdown(f'''
+    # BANNER CON TÍTULO CENTRADO
+    st.markdown(f"""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — {sel_month.upper()} {sel_year}</div>
       <div class='main-header-subtitle'>Gestión y Ejecución Presupuestaria en Tiempo Real</div>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Ingreso Total Recibido</div>
           <div class='kpi-card-value'>${total_ingreso_act:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     with c2:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Total Gastado (Fijo + Var)</div>
           <div class='kpi-card-value'>${total_gastado:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     with c3:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Total Ahorrado / Invertido</div>
           <div class='kpi-card-value'>${total_ahorro:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     with c4:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='restante-card'>
           <div class='restante-card-label'>Dinero Restante Disponible</div>
           <div class='restante-card-value'>${dinero_restante:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
         
     st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
     
-    # Gráficos con corrección de títulos
+    # Gráficos con títulos centrados
     g_col1, g_col2 = st.columns(2)
     with g_col1:
         df_pie = pd.DataFrame({
@@ -531,7 +610,7 @@ if menu_selection == "📅 Presupuesto Mensual":
                              color_discrete_sequence=["#00385C", "#31B4D1", "#00ACA9"])
         fig_pie.update_layout(
             template="plotly_white",
-            title=dict(text="Distribución 50/30/20 del Mes", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
+            title=dict(text="Distribución 50/30/20 del Mes", x=0.5, xanchor="center", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
             margin=dict(t=40, b=10, l=10, r=10),
             height=250,
             paper_bgcolor="#FFFFFF",
@@ -550,7 +629,7 @@ if menu_selection == "📅 Presupuesto Mensual":
         fig_bar.update_layout(
             template="plotly_white",
             barmode='group',
-            title=dict(text="Comparativa Flujo de Caja", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
+            title=dict(text="Comparativa Flujo de Caja", x=0.5, xanchor="center", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
             margin=dict(t=40, b=10, l=10, r=10),
             height=250,
             paper_bgcolor="#FFFFFF",
@@ -569,9 +648,6 @@ if menu_selection == "📅 Presupuesto Mensual":
     # ==========================================
     col_izq, col_der = st.columns(2)
 
-    # ------------------------------------------
-    # COLUMNA IZQUIERDA: INGRESOS Y FACTURAS
-    # ------------------------------------------
     with col_izq:
         # 1. INGRESOS (Solo Actual)
         st.markdown("<div class='section-badge'>💵 1. INGRESOS (VALOR RECIBIDO)</div>", unsafe_allow_html=True)
@@ -648,9 +724,6 @@ if menu_selection == "📅 Presupuesto Mensual":
             else:
                 st.info("Sin facturas para editar.")
 
-    # ------------------------------------------
-    # COLUMNA DERECHA: GASTOS VARIABLES Y AHORROS
-    # ------------------------------------------
     with col_der:
         # 3. GASTOS VARIABLES
         st.markdown("<div class='section-badge'>🛒 3. GASTOS VARIABLES</div>", unsafe_allow_html=True)
@@ -767,7 +840,7 @@ if menu_selection == "📅 Presupuesto Mensual":
     st.markdown("---")
 
     # ==========================================
-    # SECCIÓN 5: SEGUIMIENTO DE TRANSACCIONES (TAMBIÉN EN 2 COLUMNAS)
+    # SECCIÓN 5: SEGUIMIENTO DE TRANSACCIONES (2 COLUMNAS)
     # ==========================================
     st.markdown("<div class='section-badge'>📝 5. SEGUIMIENTO DE GASTOS DIARIOS</div>", unsafe_allow_html=True)
     col_tx_list, col_tx_form = st.columns([1.3, 1])
@@ -805,15 +878,15 @@ if menu_selection == "📅 Presupuesto Mensual":
                     st.warning("El monto debe ser superior a 0.")
 
 # ==========================================
-# 7. VISTA: RESUMEN ANUAL CONSOLIDADO (SOLO MESES CREADOS)
+# 7. VISTA: RESUMEN ANUAL CONSOLIDADO
 # ==========================================
 elif menu_selection == "📊 Resumen Anual":
-    st.markdown(f'''
+    st.markdown(f"""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — CONSOLIDADO ANUAL {sel_year}</div>
       <div class='main-header-subtitle'>Rendimiento y Ejecución Financiera Mensualizada ({len(months_in_active_year)} meses registrados)</div>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     summary_data = []
     for m in months_in_active_year:
@@ -843,33 +916,33 @@ elif menu_selection == "📊 Resumen Anual":
     
     ca1, ca2, ca3, ca4 = st.columns(4)
     with ca1:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Ingresos Totales {sel_year}</div>
           <div class='kpi-card-value'>${tot_ing:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     with ca2:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Gastos Totales {sel_year}</div>
           <div class='kpi-card-value'>${tot_gas:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     with ca3:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='kpi-card'>
           <div class='kpi-card-label'>Ahorro Acumulado {sel_year}</div>
           <div class='kpi-card-value'>${tot_aho:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     with ca4:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class='restante-card'>
           <div class='restante-card-label'>Superávit Neto Anual</div>
           <div class='restante-card-value'>${tot_flu:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
         
     st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
     
@@ -880,7 +953,7 @@ elif menu_selection == "📊 Resumen Anual":
         fig_an.add_trace(go.Bar(x=df_annual["Mes"], y=df_annual["Ahorros"], name="Ahorros", marker_color="#00385C"))
         fig_an.update_layout(
             template="plotly_white",
-            title=dict(text=f"Comportamiento Mes a Mes ({sel_year})", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
+            title=dict(text=f"Comportamiento Mes a Mes ({sel_year})", x=0.5, xanchor="center", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
             barmode='group',
             height=340,
             paper_bgcolor="#FFFFFF",
@@ -900,13 +973,13 @@ elif menu_selection == "📊 Resumen Anual":
 # ==========================================
 # 8. VISTA: HORIZONTES FINANCIEROS (3, 5, 10+ AÑOS)
 # ==========================================
-elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
-    st.markdown('''
+elif menu_selection == "📈 Horizontes Financieros":
+    st.markdown("""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — PLANIFICACIÓN PLURIANUAL</div>
       <div class='main-header-subtitle'>Proyección Estratégica: Corto Plazo (3 años), Mediano Plazo (5 años) y Largo Plazo (10+ años)</div>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     tab_cp, tab_mp, tab_lp = st.tabs([
         "⚡ Corto Plazo (3 Años)",
@@ -959,7 +1032,7 @@ elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
                         color_discrete_sequence=["#00385C", "#00ACA9"])
         fig_cp.update_layout(
             template="plotly_white",
-            title=dict(text="Evolución Patrimonial - Corto Plazo", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
+            title=dict(text="Evolución Patrimonial - Corto Plazo", x=0.5, xanchor="center", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
             paper_bgcolor="#FFFFFF",
             plot_bgcolor="#FFFFFF",
             font=dict(color="#00385C", family="Nunito Sans, sans-serif"),
@@ -984,7 +1057,7 @@ elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
         fig_mp = px.area(df_mp, x="Periodo", y="Patrimonio Total Estimado", color_discrete_sequence=["#00ACA9"])
         fig_mp.update_layout(
             template="plotly_white",
-            title=dict(text="Curva de Crecimiento a 5 Años", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
+            title=dict(text="Curva de Crecimiento a 5 Años", x=0.5, xanchor="center", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
             paper_bgcolor="#FFFFFF",
             plot_bgcolor="#FFFFFF",
             font=dict(color="#00385C", family="Nunito Sans, sans-serif")
@@ -1012,7 +1085,7 @@ elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
         fig_lp.add_trace(go.Scatter(x=df_lp["Año"], y=df_lp["Patrimonio Total Estimado"], name="Patrimonio Total con Interés Compuesto", fill='tonexty', line=dict(color='#00ACA9')))
         fig_lp.update_layout(
             template="plotly_white",
-            title=dict(text="Efecto Bola de Nieve a Largo Plazo", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
+            title=dict(text="Efecto Bola de Nieve a Largo Plazo", x=0.5, xanchor="center", font=dict(color="#00385C", size=14, family="Nunito Sans, sans-serif")),
             height=380,
             paper_bgcolor="#FFFFFF",
             plot_bgcolor="#FFFFFF",
@@ -1025,13 +1098,13 @@ elif menu_selection == "📈 Horizontes Financieros (3, 5, 10+ Años)":
 # ==========================================
 # 9. PANEL DE ADMINISTRACIÓN Y SUPERUSUARIO
 # ==========================================
-elif menu_selection == "👑 Panel de Administración" and is_admin:
-    st.markdown('''
+elif menu_selection == "👑 Panel de Administración":
+    st.markdown("""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — CENTRO DE CONTROL SUPERUSUARIO</div>
       <div class='main-header-subtitle'>Gestión Total de Usuarios, Roles, Creación, Edición y Auditoría Forense</div>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     t_list, t_create, t_edit, t_audit = st.tabs([
         "👥 Listado de Usuarios",
