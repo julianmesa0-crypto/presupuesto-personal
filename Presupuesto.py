@@ -266,14 +266,12 @@ if token_in_url:
     if token_in_url in sessions:
         session_info = sessions[token_in_url]
         elapsed = time.time() - session_info.get("last_activity", 0)
-        # Control estricto de inactividad de 60 segundos
         if elapsed > 60:
             destroy_user_session(token_in_url)
             st.session_state.current_user = None
             st.warning("⏱️ Sesión cerrada por inactividad (60 segundos transcurridos). Por favor ingresa de nuevo.")
             st.stop()
         else:
-            # Sesión válida y reciente: restaurar usuario tras F5
             user_candidate = session_info["email"]
             if user_candidate in all_users and all_users[user_candidate].get("is_active", True):
                 st.session_state.current_user = user_candidate
@@ -316,7 +314,7 @@ setTimeout(() => {
 st.markdown(inactivity_and_sync_js, unsafe_allow_html=True)
 
 # ==========================================
-# 4. ESTILOS CSS ADAPTABLES (SYSTEM, LIGHT, DARK)
+# 4. ESTILOS CSS ADAPTABLES (CONTRASTE EN TABLAS: FONDO BLANCO Y LETRAS AZULES EN LIGHT)
 # ==========================================
 if st.session_state.app_theme == "Dark":
     theme_css = """
@@ -337,6 +335,9 @@ if st.session_state.app_theme == "Dark":
       --notif-bg: #1E293B;
       --notif-border: #00ACA9;
       --notif-text: #F8FAFC;
+      --tbl-bg: #1E293B;
+      --tbl-text: #F8FAFC;
+      --tbl-border: #334155;
     }
     html, body, .stApp, [data-testid="stAppViewContainer"], .main {
       background-color: #0F172A !important;
@@ -354,7 +355,7 @@ elif st.session_state.app_theme == "Light":
     :root {
       color-scheme: light !important;
       --card-bg: #FFFFFF;
-      --card-border: #E2E8F0;
+      --card-border: #CBD5E1;
       --main-text: #1E293B;
       --sub-text: #64748B;
       --kpi-title: #00385C;
@@ -368,6 +369,9 @@ elif st.session_state.app_theme == "Light":
       --notif-bg: #E5F6FF;
       --notif-border: #00385C;
       --notif-text: #00385C;
+      --tbl-bg: #FFFFFF;
+      --tbl-text: #00385C;
+      --tbl-border: #CBD5E1;
     }
     html, body, .stApp, [data-testid="stAppViewContainer"], .main {
       background-color: #FFFFFF !important;
@@ -381,28 +385,32 @@ elif st.session_state.app_theme == "Light":
     chart_bg = "#FFFFFF"
     chart_text = "#00385C"
 else:
+    # System: Garantiza fondo blanco y letras azul marino en las tablas
     theme_css = """
     :root {
       --card-bg: var(--background-color, #FFFFFF);
       --card-border: rgba(148, 163, 184, 0.3);
       --main-text: var(--text-color, #1E293B);
       --sub-text: #64748B;
-      --kpi-title: #00ACA9;
+      --kpi-title: #00385C;
       --banner-bg: linear-gradient(135deg, #00385C, #0F4F7F);
       --badge-bg: rgba(0, 56, 92, 0.1);
       --badge-border: #00385C;
-      --badge-text: var(--text-color, #00385C);
+      --badge-text: #00385C;
       --restante-bg: rgba(0, 172, 169, 0.08);
       --restante-border: #00ACA9;
       --restante-text: #00ACA9;
       --notif-bg: #E5F6FF;
       --notif-border: #00385C;
       --notif-text: #00385C;
+      --tbl-bg: #FFFFFF;
+      --tbl-text: #00385C;
+      --tbl-border: #CBD5E1;
     }
     """
     chart_template = "none"
     chart_bg = "rgba(0,0,0,0)"
-    chart_text = "#00ACA9"
+    chart_text = "#00385C"
 
 st.markdown(f"""
 <style>
@@ -412,6 +420,42 @@ st.markdown(f"""
 
 html, body, .stApp {{
   font-family: 'Nunito Sans', sans-serif !important;
+}}
+
+/* REGLAS ESTRICTAS DE CONTRASTE PARA TABLAS (FONDO BLANCO Y LETRAS AZULES EN LIGHT/SYSTEM) */
+[data-testid="stDataFrame"], [data-testid="stDataEditor"] {{
+  background-color: var(--tbl-bg) !important;
+  color: var(--tbl-text) !important;
+  border: 1px solid var(--tbl-border) !important;
+  border-radius: 8px !important;
+}}
+
+[data-testid="stDataFrame"] div, [data-testid="stDataEditor"] div {{
+  background-color: var(--tbl-bg) !important;
+  color: var(--tbl-text) !important;
+}}
+
+[data-testid="stDataFrame"] table, [data-testid="stDataEditor"] table {{
+  background-color: var(--tbl-bg) !important;
+  color: var(--tbl-text) !important;
+}}
+
+[data-testid="stDataFrame"] th, [data-testid="stDataEditor"] th {{
+  background-color: var(--tbl-bg) !important;
+  color: var(--tbl-text) !important;
+  font-weight: 800 !important;
+  border-bottom: 2px solid var(--tbl-border) !important;
+}}
+
+[data-testid="stDataFrame"] td, [data-testid="stDataEditor"] td {{
+  background-color: var(--tbl-bg) !important;
+  color: var(--tbl-text) !important;
+  border-bottom: 1px solid var(--tbl-border) !important;
+}}
+
+/* Canvas de Glide Data Grid forzado para evitar herencia de fondo azul */
+[data-testid="stDataFrame"] canvas, [data-testid="stDataEditor"] canvas {{
+  filter: none !important;
 }}
 
 /* SIDEBAR ESTILO SAP BYDESIGN COLOR #29AFE2 CON LETRAS BLANCAS */
@@ -660,7 +704,6 @@ if st.session_state.current_user is None or st.session_state.current_user not in
                                 all_users_fresh[login_email] = u_data
                                 save_all_users(all_users_fresh)
                                 
-                                # Crear sesión persistente a F5 y registrar timestamp
                                 create_user_session(login_email)
                                 st.session_state.current_user = login_email
                                 init_user_finances(login_email)
@@ -768,7 +811,6 @@ init_user_finances(current_email)
 all_finances = get_all_finances()
 user_fin = all_finances.get(current_email, {})
 
-# CÁLCULO DE TAREAS Y MENSAJES PENDIENTES PARA LA CAMPANA 🔔
 notifications = []
 now = datetime.now()
 current_sys_year = str(now.year)
@@ -793,7 +835,6 @@ elif current_sys_month not in user_fin[current_sys_year]:
         "is_approval": False
     })
 
-# Disparar sonido si llegaron nuevas alertas
 notif_count = len(notifications)
 if notif_count > st.session_state.prev_notif_count:
     trigger_bell_sound()
@@ -810,7 +851,6 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # SELECTOR DE TEMA: System, Light, Dark
     theme_choice = st.selectbox(
         "🎨 Tema Visual",
         ["System", "Light", "Dark"],
@@ -820,21 +860,17 @@ with st.sidebar:
         st.session_state.app_theme = theme_choice
         st.rerun()
 
-    # CAMPANA DE NOTIFICACIONES (🔔) CON HIPERVÍNCULOS
     with st.expander(f"🔔 Notificaciones y Tareas {f'({notif_count})' if notif_count > 0 else ''}", expanded=(notif_count > 0)):
         if notifications:
             for idx, n in enumerate(notifications):
                 st.markdown(f"<div class='notif-box'>⚠️ {n['text']}</div>", unsafe_allow_html=True)
-                # Hipervínculo directo al módulo de aprobación
                 if n["is_approval"]:
                     if st.button("👉 Ir a Aprobar Usuarios Ahora", key=f"link_aprob_{idx}", use_container_width=True):
                         st.session_state.active_module = "👑 Panel de Administración"
-                        st.session_state.admin_selected_tab = "👥 Listado & Aprobación de Usuarios"
                         st.rerun()
         else:
             st.success("✅ No tienes tareas pendientes. ¡Todo al día!")
 
-    # Tarjeta de Usuario Activo
     st.markdown(f"""
     <div class='sap-user-card'>
       <div style='font-size: 0.68rem; color: #FFFFFF !important; font-weight: 800; text-transform: uppercase;'>Usuario Activo</div>
@@ -844,7 +880,6 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # 1. MÓDULOS DE TRABAJO (ARRIBA)
     st.markdown("<div class='sap-work-center-header'>Centro de Trabajo (Módulos)</div>", unsafe_allow_html=True)
 
     module_list = [
@@ -867,8 +902,6 @@ with st.sidebar:
     menu_selection = st.session_state.active_module.split(" (")[0]
 
     st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-
-    # 2. GESTIÓN DE AÑOS Y MESES (DEBAJO DE LOS MÓDULOS)
     st.markdown("<div class='sap-work-center-header'>Período Fiscal & Parámetros</div>", unsafe_allow_html=True)
 
     created_years = sorted(list(user_fin.keys()))
@@ -906,7 +939,7 @@ with st.sidebar:
 
     months_in_active_year = [m for m in CHRONO_MONTHS if m in user_fin.get(sel_year, {})]
     if not months_in_active_year:
-        user_fin[sel_year]["Enero"] = create_initial_example_month()
+        user_fin[sel_year] = {"Enero": create_initial_example_month()}
         all_finances[current_email] = user_fin
         save_all_finances(all_finances)
         months_in_active_year = ["Enero"]
@@ -965,7 +998,6 @@ if menu_selection == "📅 Presupuesto Mensual":
     if df_seg.empty:
         df_seg = pd.DataFrame(columns=["Monto", "Categoría", "Fecha", "Detalle"])
         
-    # CÁLCULOS REACTIVOS TOTALES
     total_ingreso_act = float(df_ing["Actual"].sum()) if not df_ing.empty and "Actual" in df_ing.columns else 0.0
     total_facturas = float(df_fac["Monto"].sum()) if not df_fac.empty and "Monto" in df_fac.columns else 0.0
     total_var = float(df_var["Monto"].sum()) if not df_var.empty and "Monto" in df_var.columns else 0.0
@@ -983,7 +1015,6 @@ if menu_selection == "📅 Presupuesto Mensual":
     var_des = df_var[df_var["Tipo"] == "Deseos"]["Monto"].sum() if (not df_var.empty and "Tipo" in df_var.columns and "Monto" in df_var.columns) else 0.0
     des_total = fac_des + var_des
     
-    # BANNER CON TÍTULO TOTALMENTE CENTRADO
     st.markdown(f"""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — {sel_month.upper()} {sel_year}</div>
@@ -991,7 +1022,6 @@ if menu_selection == "📅 Presupuesto Mensual":
     </div>
     """, unsafe_allow_html=True)
     
-    # TARJETAS DE VALORES KPI
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.markdown(f"""
@@ -1024,7 +1054,6 @@ if menu_selection == "📅 Presupuesto Mensual":
         
     st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
     
-    # GRÁFICOS REACTIVOS
     g_col1, g_col2 = st.columns(2)
     with g_col1:
         df_pie = pd.DataFrame({
