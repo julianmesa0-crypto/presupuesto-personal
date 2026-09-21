@@ -402,7 +402,7 @@ user_fin = st.session_state.finances[current_email]
 if menu_selection == "📅 Presupuesto Mensual":
     col_m, col_sp = st.columns([1.5, 3])
     with col_m:
-        sel_month = st.selectbox("Seleccionar Mes", MONTHS, index=3) # Abril por defecto
+        sel_month = st.selectbox("Seleccionar Mes", MONTHS, index=3)
         
     data_m = user_fin[sel_month]
     
@@ -485,7 +485,6 @@ if menu_selection == "📅 Presupuesto Mensual":
     # GRÁFICOS
     g_col1, g_col2 = st.columns(2)
     with g_col1:
-        # Gráfica Dona 50/30/20
         df_pie = pd.DataFrame({
             "Categoría": ["50% Necesidades", "30% Deseos", "20% Ahorros"],
             "Monto": [nec_act, des_act, ahorro_act_p]
@@ -502,7 +501,6 @@ if menu_selection == "📅 Presupuesto Mensual":
         st.plotly_chart(fig_pie, use_container_width=True)
         
     with g_col2:
-        # Gráfica Ingresos vs Gastos
         fig_bar = go.Figure(data=[
             go.Bar(name='Ingresos', x=['Total'], y=[total_ingreso_act], marker_color='#00ACA9'),
             go.Bar(name='Gastos', x=['Total'], y=[total_gastado], marker_color='#D74546'),
@@ -612,10 +610,10 @@ elif menu_selection == "📊 Resumen Anual":
     summary_data = []
     for m in MONTHS:
         d = user_fin[m]
-        ing = d["ingresos"]["Actual"].sum()
-        fac = d["facturas"]["Actual"].sum()
-        var = d["seguimiento"]["Monto"].sum()
-        aho = d["ahorros"]["Actual"].sum()
+        ing = float(d["ingresos"]["Actual"].sum())
+        fac = float(d["facturas"]["Actual"].sum())
+        var = float(d["seguimiento"]["Monto"].sum())
+        aho = float(d["ahorros"]["Actual"].sum())
         gas = fac + var
         flujo = ing - gas - aho
         
@@ -629,7 +627,6 @@ elif menu_selection == "📊 Resumen Anual":
         
     df_annual = pd.DataFrame(summary_data)
     
-    # Métricas anuales
     tot_ing = df_annual["Ingresos"].sum()
     tot_gas = df_annual["Gastos"].sum()
     tot_aho = df_annual["Ahorros"].sum()
@@ -645,7 +642,6 @@ elif menu_selection == "📊 Resumen Anual":
     with ca4:
         st.metric("Flujo Neto Acumulado", f"${tot_flu:,.2f}")
         
-    # Gráfica Anual
     fig_an = go.Figure()
     fig_an.add_trace(go.Bar(x=df_annual["Mes"], y=df_annual["Ingresos"], name="Ingresos", marker_color="#00ACA9"))
     fig_an.add_trace(go.Bar(x=df_annual["Mes"], y=df_annual["Gastos"], name="Gastos", marker_color="#D74546"))
@@ -653,7 +649,6 @@ elif menu_selection == "📊 Resumen Anual":
     fig_an.update_layout(title="Comportamiento Financiero Mes a Mes", barmode='group', height=360)
     st.plotly_chart(fig_an, use_container_width=True)
     
-    # Tabla Anual
     st.dataframe(
         df_annual.style.format({
             "Ingresos": "${:,.2f}",
@@ -696,7 +691,6 @@ elif menu_selection == "👑 Panel de Administración" and is_admin:
         user_names = [d["name"] for d in st.session_state.users.values()]
         selected_name = st.selectbox("Seleccione el Nombre del Usuario", user_names)
         
-        # Encontrar el correo asociado al nombre seleccionado
         target_mail = None
         for mail, dat in st.session_state.users.items():
             if dat["name"] == selected_name:
