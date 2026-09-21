@@ -178,7 +178,7 @@ def init_system_state():
         admin_hash, admin_salt = hash_password("admin123")
         user_hash, user_salt = hash_password("123456")
         st.session_state.users = {
-            "admin@presupuesto.com": {
+            "admin@optibudget.com": {
                 "name": "Super Administrador",
                 "role": "Superusuario",
                 "hash": admin_hash,
@@ -207,7 +207,7 @@ def init_system_state():
             "port": 587,
             "sender": "alertas.seguridad@midominio.com",
             "password": "",
-            "recipient": "admin@presupuesto.com",
+            "recipient": "admin@optibudget.com",
             "active": False
         }
 
@@ -272,13 +272,13 @@ def send_security_alert(target_email, event_type, details):
             msg["To"] = cfg["recipient"]
             
             html = f"""
-            <h3>Alerta de Seguridad Militar en Finanzas 50/30/20</h3>
+            <h3>Alerta de Seguridad Militar en OptiBudget Pro</h3>
             <p><b>Evento:</b> {event_type}</p>
             <p><b>Fecha y Hora:</b> {log_entry['timestamp']}</p>
             <p><b>Cuenta objetivo:</b> {target_email}</p>
             <p><b>Detalles:</b> {details}</p>
             <hr>
-            <p style='color: #00385C;'>Sistema Automatizado de Defensa Criptográfica</p>
+            <p style='color: #00385C;'>Sistema Automatizado de Defensa Criptográfica - OptiBudget Pro</p>
             """
             msg.attach(MIMEText(html, "html"))
             
@@ -296,7 +296,7 @@ def send_security_alert(target_email, event_type, details):
 if st.session_state.current_user is None:
     st.markdown("""
     <div style='text-align: center; padding: 2rem 0 1rem 0;'>
-      <h1 style='color: #00385C; margin: 0;'>💼 Presupuesto 50/30/20 Plus</h1>
+      <h1 style='color: #00385C; margin: 0;'>💼 OptiBudget Pro</h1>
       <p style='color: #18688D; font-size: 1.05rem;'>Control financiero inteligente con seguridad criptográfica</p>
     </div>
     """, unsafe_allow_html=True)
@@ -309,7 +309,7 @@ if st.session_state.current_user is None:
             with st.form("form_login"):
                 login_email = st.text_input("Correo electrónico").strip().lower()
                 login_pass = st.text_input("Contraseña", type="password")
-                btn_login = st.form_submit_button("Ingresar al Portal", use_container_width=True)
+                btn_login = st.form_submit_button("Ingresar a OptiBudget Pro", use_container_width=True)
                 
                 if btn_login:
                     if login_email in st.session_state.users:
@@ -373,6 +373,13 @@ user_info = st.session_state.users[current_email]
 is_admin = user_info["role"] == "Superusuario"
 
 with st.sidebar:
+    st.markdown("""
+    <div style='text-align: center; margin-bottom: 0.8rem;'>
+      <div style='font-size: 1.3rem; font-weight: 700; color: #00385C;'>💼 OptiBudget Pro</div>
+      <div style='font-size: 0.8rem; color: #18688D;'>Finanzas Inteligentes 50/30/20</div>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown(f"""
     <div style='background: #E5F6FF; border: 1px solid #A0DFF7; padding: 12px; border-radius: 8px; margin-bottom: 1rem;'>
       <div style='font-size: 0.8rem; color: #0A405F; font-weight: 700;'>SESIÓN ACTIVA</div>
@@ -402,7 +409,7 @@ user_fin = st.session_state.finances[current_email]
 if menu_selection == "📅 Presupuesto Mensual":
     col_m, col_sp = st.columns([1.5, 3])
     with col_m:
-        sel_month = st.selectbox("Seleccionar Mes", MONTHS, index=3)
+        sel_month = st.selectbox("Seleccionar Mes", MONTHS, index=3) # Abril por defecto
         
     data_m = user_fin[sel_month]
     
@@ -437,7 +444,7 @@ if menu_selection == "📅 Presupuesto Mensual":
     # BANNER SUPERIOR
     st.markdown(f"""
     <div class='main-header-banner'>
-      <div class='main-header-title'>{sel_month.upper()} 2026</div>
+      <div class='main-header-title'>OptiBudget Pro — {sel_month.upper()} 2026</div>
       <div class='main-header-subtitle'>Panel General de Finanzas Personales 50/30/20</div>
     </div>
     """, unsafe_allow_html=True)
@@ -485,6 +492,7 @@ if menu_selection == "📅 Presupuesto Mensual":
     # GRÁFICOS
     g_col1, g_col2 = st.columns(2)
     with g_col1:
+        # Gráfica Dona 50/30/20
         df_pie = pd.DataFrame({
             "Categoría": ["50% Necesidades", "30% Deseos", "20% Ahorros"],
             "Monto": [nec_act, des_act, ahorro_act_p]
@@ -501,6 +509,7 @@ if menu_selection == "📅 Presupuesto Mensual":
         st.plotly_chart(fig_pie, use_container_width=True)
         
     with g_col2:
+        # Gráfica Ingresos vs Gastos
         fig_bar = go.Figure(data=[
             go.Bar(name='Ingresos', x=['Total'], y=[total_ingreso_act], marker_color='#00ACA9'),
             go.Bar(name='Gastos', x=['Total'], y=[total_gastado], marker_color='#D74546'),
@@ -602,7 +611,7 @@ if menu_selection == "📅 Presupuesto Mensual":
 elif menu_selection == "📊 Resumen Anual":
     st.markdown("""
     <div class='main-header-banner'>
-      <div class='main-header-title'>CONSOLIDADO ANUAL 2026</div>
+      <div class='main-header-title'>OptiBudget Pro — CONSOLIDADO ANUAL 2026</div>
       <div class='main-header-subtitle'>Métricas acumuladas mes a mes</div>
     </div>
     """, unsafe_allow_html=True)
@@ -610,10 +619,10 @@ elif menu_selection == "📊 Resumen Anual":
     summary_data = []
     for m in MONTHS:
         d = user_fin[m]
-        ing = float(d["ingresos"]["Actual"].sum())
-        fac = float(d["facturas"]["Actual"].sum())
-        var = float(d["seguimiento"]["Monto"].sum())
-        aho = float(d["ahorros"]["Actual"].sum())
+        ing = d["ingresos"]["Actual"].sum()
+        fac = d["facturas"]["Actual"].sum()
+        var = d["seguimiento"]["Monto"].sum()
+        aho = d["ahorros"]["Actual"].sum()
         gas = fac + var
         flujo = ing - gas - aho
         
@@ -627,6 +636,7 @@ elif menu_selection == "📊 Resumen Anual":
         
     df_annual = pd.DataFrame(summary_data)
     
+    # Métricas anuales
     tot_ing = df_annual["Ingresos"].sum()
     tot_gas = df_annual["Gastos"].sum()
     tot_aho = df_annual["Ahorros"].sum()
@@ -642,6 +652,7 @@ elif menu_selection == "📊 Resumen Anual":
     with ca4:
         st.metric("Flujo Neto Acumulado", f"${tot_flu:,.2f}")
         
+    # Gráfica Anual
     fig_an = go.Figure()
     fig_an.add_trace(go.Bar(x=df_annual["Mes"], y=df_annual["Ingresos"], name="Ingresos", marker_color="#00ACA9"))
     fig_an.add_trace(go.Bar(x=df_annual["Mes"], y=df_annual["Gastos"], name="Gastos", marker_color="#D74546"))
@@ -649,15 +660,11 @@ elif menu_selection == "📊 Resumen Anual":
     fig_an.update_layout(title="Comportamiento Financiero Mes a Mes", barmode='group', height=360)
     st.plotly_chart(fig_an, use_container_width=True)
     
-    st.dataframe(
-        df_annual.style.format({
-            "Ingresos": "${:,.2f}",
-            "Gastos": "${:,.2f}",
-            "Ahorros": "${:,.2f}",
-            "Flujo Neto": "${:,.2f}"
-        }),
-        use_container_width=True
-    )
+    # Tabla Anual
+    df_annual_formatted = df_annual.copy()
+    for col in ["Ingresos", "Gastos", "Ahorros", "Flujo Neto"]:
+        df_annual_formatted[col] = df_annual_formatted[col].apply(lambda x: f"${x:,.2f}")
+    st.dataframe(df_annual_formatted, use_container_width=True)
 
 # ==========================================
 # 8. PANEL DE ADMINISTRACIÓN Y SEGURIDAD (SUPERUSUARIO)
@@ -665,7 +672,7 @@ elif menu_selection == "📊 Resumen Anual":
 elif menu_selection == "👑 Panel de Administración" and is_admin:
     st.markdown("""
     <div class='main-header-banner'>
-      <div class='main-header-title'>CENTRO DE COMANDO & ADMINISTRACIÓN</div>
+      <div class='main-header-title'>OptiBudget Pro — CENTRO DE COMANDO & ADMINISTRACIÓN</div>
       <div class='main-header-subtitle'>Gestión de identidades, restablecimiento y bitácora militar</div>
     </div>
     """, unsafe_allow_html=True)
