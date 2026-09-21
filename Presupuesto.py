@@ -502,7 +502,7 @@ with st.sidebar:
         with st.form("form_create_year"):
             next_suggested_year = max(created_years) + 1 if created_years else 2026
             new_year_input = st.number_input("Año a crear", min_value=2020, max_value=2099, value=next_suggested_year, step=1)
-            btn_create_year = st.form_submit_button("Crear Año (con Enero)", use_container_width=True)
+            btn_create_year = st.form_submit_button("Crear Año", use_container_width=True)
             
             if btn_create_year:
                 if new_year_input in user_fin:
@@ -530,10 +530,10 @@ with st.sidebar:
     if uncreated_months:
         with st.expander("➕ Crear Nuevo Mes"):
             with st.form("form_create_month"):
-                st.caption("Copia la lista de conceptos del mes previo con los valores en 0.0.")
+                st.caption("Copia la lista de conceptos del mes previo o a seleccionar")
                 next_month_to_create = st.selectbox("Mes a crear", uncreated_months, index=0)
                 clone_from = st.selectbox("Traer campos de:", months_in_active_year, index=len(months_in_active_year)-1)
-                btn_create_month = st.form_submit_button(f"Crear {next_month_to_create}", use_container_width=True)
+                btn_create_month = st.form_submit_button("Crear Mes", use_container_width=True)
                 
                 if btn_create_month:
                     source_data = user_fin[sel_year][clone_from]
