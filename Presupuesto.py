@@ -26,12 +26,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Inicializar tema de la app en session_state si no existe
 if "app_theme" not in st.session_state:
     st.session_state.app_theme = "System"
 
 # ==========================================
-# 2. PERSISTENCIA EN ARCHIVOS LOCALES (COMPARTIDO ENTRE MÓVIL Y WEB)
+# 2. PERSISTENCIA EN ARCHIVOS LOCALES
 # ==========================================
 USERS_FILE = "users_db.json"
 FINANCES_FILE = "finances_db.json"
@@ -39,6 +38,7 @@ SMTP_FILE = "smtp_db.json"
 AUDIT_FILE = "audit_db.json"
 SESSIONS_FILE = "sessions_db.json"
 SETTINGS_FILE = "settings_db.json"
+CATEGORIES_FILE = "categories_db.json"
 
 def hash_password(password: str, salt: str = None) -> tuple:
     if salt is None:
@@ -88,7 +88,6 @@ def get_all_users():
             "salt": default_user_salt,
             "is_active": True,
             "must_change_password": False,
-            "failed_attempts": 0,
             "locked_until": None,
             "created_at": "2026-09-21 00:00"
         }
@@ -186,6 +185,25 @@ def save_user_settings(email, settings_dict):
     all_settings = load_json_file(SETTINGS_FILE, {})
     all_settings[email] = settings_dict
     save_json_file(SETTINGS_FILE, all_settings)
+
+def get_user_categories(email):
+    all_cats = load_json_file(CATEGORIES_FILE, {})
+    if email not in all_cats:
+        all_cats[email] = {
+            "clasificaciones": ["Necesidades", "Deseos", "Ahorros"],
+            "gastos_variables": [
+                "Mercado y Alimentación", "Transporte / Combustible", "Restaurantes y Salidas",
+                "Entretenimiento y Ocio", "Salud y Medicamentos", "Mascotas", "Cuidado Personal",
+                "Hogar", "Ropa", "Educación", "Misceláneos"
+            ]
+        }
+        save_json_file(CATEGORIES_FILE, all_cats)
+    return all_cats[email]
+
+def save_user_categories(email, cats_dict):
+    all_cats = load_json_file(CATEGORIES_FILE, {})
+    all_cats[email] = cats_dict
+    save_json_file(CATEGORIES_FILE, all_cats)
 
 CHRONO_MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
                  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
@@ -344,7 +362,7 @@ setTimeout(() => {
 st.markdown(inactivity_and_sync_js, unsafe_allow_html=True)
 
 # ==========================================
-# 4. ESTILOS CSS CON BOTONES DE CREAR MES/AÑO ADAPTABLES AL TEMA DEL SISTEMA
+# 4. ESTILOS CSS CON BOTONES ADAPTABLES AL TEMA DEL SISTEMA
 # ==========================================
 st.markdown("""
 <style>
@@ -354,7 +372,6 @@ html, body, .stApp {
   font-family: 'Nunito Sans', sans-serif !important;
 }
 
-/* SIDEBAR ESTILO SAP BYDESIGN COLOR #29AFE2 CON LETRAS BLANCAS */
 [data-testid="stSidebar"], [data-testid="stSidebarContent"] {
   background-color: #29afe2 !important;
   border-right: 1.5px solid #1e98c7 !important;
@@ -519,7 +536,6 @@ html, body, .stApp {
   border-left: 5px solid #00ACA9;
 }
 
-/* BOTONES DE CREAR MES Y AÑO SEGÚN TEMA DEL SISTEMA */
 @media (prefers-color-scheme: light) {
   div[data-testid="stForm"] button[kind="secondary"], div[data-testid="stForm"] button[kind="primary"] {
     background-color: #FFFFFF !important;
@@ -702,13 +718,14 @@ if user_info.get("must_change_password", False):
     st.stop()
 
 # ==========================================
-# 7. MENÚ LATERAL ESTILO SAP BYDESIGN Y CONFIGURACIÓN DE MONEDA / TRM
+# 7. MENÚ LATERAL ESTILO SAP BYDESIGN & CONFIGURACIÓN
 # ==========================================
 is_admin = user_info["role"] == "Superusuario"
 init_user_finances(current_email)
 all_finances = get_all_finances()
 user_fin = all_finances.get(current_email, {})
 user_sets = get_user_settings(current_email)
+user_cats = get_user_categories(current_email)
 
 notifications = []
 now = datetime.now()
@@ -770,9 +787,8 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # CONFIGURACIÓN DE MONEDA PRINCIPAL Y TRM EN EL SIDEBAR (AUTOMÁTICA O MANUAL)
+    # CONFIGURACIÓN DE MONEDA Y TRM
     st.markdown("<div class='sap-work-center-header'>Configuración Monetaria & TRM</div>", unsafe_allow_html=True)
-    
     if st.button("🌐 Sincronizar TRM de Internet", use_container_width=True):
         live_u, live_e = fetch_live_trm_rates()
         user_sets["trm_usd_cop"] = live_u
@@ -784,12 +800,10 @@ with st.sidebar:
     with st.form("form_currency_settings"):
         curr_options = ["COP", "USD", "EUR"]
         selected_curr = st.selectbox("Moneda Principal", curr_options, index=curr_options.index(user_sets.get("currency", "COP")))
-        
         trm_usd = st.number_input("TRM USD a COP", value=float(user_sets.get("trm_usd_cop", 4100.0)), step=10.0)
         trm_eur = st.number_input("TRM EUR a COP", value=float(user_sets.get("trm_eur_cop", 4450.0)), step=10.0)
         
-        btn_save_sets = st.form_submit_button("Actualizar Divisa", use_container_width=True)
-        if btn_save_sets:
+        if st.form_submit_button("Actualizar Divisa", use_container_width=True):
             user_sets["currency"] = selected_curr
             user_sets["trm_usd_cop"] = trm_usd
             user_sets["trm_eur_cop"] = trm_eur
@@ -797,7 +811,6 @@ with st.sidebar:
             st.success("Moneda principal actualizada.")
             st.rerun()
 
-    # Indicador dinámico de TRM adaptado a la moneda principal seleccionada
     main_curr = user_sets.get("currency", "COP")
     u_val = user_sets.get('trm_usd_cop', 4100)
     e_val = user_sets.get('trm_eur_cop', 4450)
@@ -825,7 +838,8 @@ with st.sidebar:
     module_list = [
         ("📅 Presupuesto Mensual", "Ejecución y Gestión"),
         ("📊 Resumen Anual", "Consolidado Fiscal"),
-        ("📈 Horizontes Financieros", "Proyección 3, 5, 10+ Años")
+        ("📈 Horizontes Financieros", "Proyección 3, 5, 10+ Años"),
+        ("🏷️ Categorías & Clasificaciones", "Gestión de Etiquetas")
     ]
     if is_admin:
         admin_notif_tag = f" ({len(pending_users)})" if (is_admin and pending_users) else ""
@@ -911,26 +925,33 @@ with st.sidebar:
     else:
         st.caption("✅ Todos los meses de este año están creados.")
 
-    st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
-    if st.button("🗑️ Eliminar Mes Activo", use_container_width=True):
-        if len(months_in_active_year) <= 1:
-            st.error("No puedes eliminar el único mes restante del año.")
-        else:
-            del user_fin[sel_year][sel_month]
-            all_finances[current_email] = user_fin
-            save_all_finances(all_finances)
-            st.success(f"Mes {sel_month} eliminado correctamente.")
-            st.rerun()
+    with st.expander("🗑️ Eliminar Mes"):
+        with st.form("form_delete_specific_month"):
+            month_to_del = st.selectbox("Seleccione el mes a eliminar", months_in_active_year)
+            btn_del_month = st.form_submit_button("Borrar Mes Seleccionado", use_container_width=True)
+            if btn_del_month:
+                if len(months_in_active_year) <= 1:
+                    st.error("No puedes eliminar el único mes restante del año.")
+                else:
+                    del user_fin[sel_year][month_to_del]
+                    all_finances[current_email] = user_fin
+                    save_all_finances(all_finances)
+                    st.success(f"Mes {month_to_del} eliminado correctamente.")
+                    st.rerun()
 
-    if st.button("🗑️ Eliminar Año Activo", use_container_width=True):
-        if len(created_years) <= 1:
-            st.error("No puedes eliminar el único año fiscal existente.")
-        else:
-            del user_fin[sel_year]
-            all_finances[current_email] = user_fin
-            save_all_finances(all_finances)
-            st.success(f"Año {sel_year} eliminado correctamente.")
-            st.rerun()
+    with st.expander("🗑️ Eliminar Año"):
+        with st.form("form_delete_specific_year"):
+            year_to_del = st.selectbox("Seleccione el año a eliminar", created_years)
+            btn_del_year = st.form_submit_button("Borrar Año Seleccionado", use_container_width=True)
+            if btn_del_year:
+                if len(created_years) <= 1:
+                    st.error("No puedes eliminar el único año fiscal existente.")
+                else:
+                    del user_fin[year_to_del]
+                    all_finances[current_email] = user_fin
+                    save_all_finances(all_finances)
+                    st.success(f"Año {year_to_del} eliminado correctamente.")
+                    st.rerun()
 
     st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
     if st.button("🚪 Cerrar Sesión", use_container_width=True):
@@ -940,7 +961,6 @@ with st.sidebar:
         st.session_state.current_user = None
         st.rerun()
 
-# Función de conversión TRM a la moneda principal del usuario
 def convert_to_main_currency(amount, transaction_currency, sets):
     main_curr = sets.get("currency", "COP")
     trm_usd = float(sets.get("trm_usd_cop", 4100.0))
@@ -975,7 +995,7 @@ curr_code = user_sets.get("currency", "COP")
 curr_symbol = {"COP": "$", "USD": "US$", "EUR": "€"}.get(curr_code, "$")
 
 # ==========================================
-# 8. VISTA: PRESUPUESTO MENSUAL (REACTIVO & TRM & FECHA & EXPORTACIÓN & ELIMINAR MES/AÑO)
+# 8. VISTA: PRESUPUESTO MENSUAL
 # ==========================================
 if menu_selection == "📅 Presupuesto Mensual":
     raw_month = user_fin[sel_year][sel_month]
@@ -1002,18 +1022,24 @@ if menu_selection == "📅 Presupuesto Mensual":
     total_gastado = total_facturas + total_var + total_seg
     dinero_restante = total_ingreso_act - total_gastado - total_ahorro
     
-    fac_nec = df_fac[df_fac["Tipo"] == "Necesidades"]["Monto"].sum() if (not df_fac.empty and "Tipo" in df_fac.columns and "Monto" in df_fac.columns) else 0.0
-    var_nec = df_var[df_var["Tipo"] == "Necesidades"]["Monto"].sum() if (not df_var.empty and "Tipo" in df_var.columns and "Monto" in df_var.columns) else 0.0
+    fac_nec = df_fac[df_fac["Tipo"].isin([c for c in user_cats["clasificaciones"]])]["Monto"].sum() if not df_fac.empty else 0.0
+    # Usar clasificaciones dinámicas
+    class_list = user_cats["clasificaciones"]
+    primary_class = class_list[0] if class_list else "Necesidades"
+    secondary_class = class_list[1] if len(class_list) > 1 else "Deseos"
+
+    fac_nec = df_fac[df_fac["Tipo"] == primary_class]["Monto"].sum() if not df_fac.empty else 0.0
+    var_nec = df_var[df_var["Tipo"] == primary_class]["Monto"].sum() if not df_var.empty else 0.0
     nec_total = fac_nec + var_nec
     
-    fac_des = df_fac[df_fac["Tipo"] == "Deseos"]["Monto"].sum() if (not df_fac.empty and "Tipo" in df_fac.columns and "Monto" in df_fac.columns) else 0.0
-    var_des = df_var[df_var["Tipo"] == "Deseos"]["Monto"].sum() if (not df_var.empty and "Tipo" in df_var.columns and "Monto" in df_var.columns) else 0.0
+    fac_des = df_fac[df_fac["Tipo"] == secondary_class]["Monto"].sum() if not df_fac.empty else 0.0
+    var_des = df_var[df_var["Tipo"] == secondary_class]["Monto"].sum() if not df_var.empty else 0.0
     des_total = fac_des + var_des
     
     st.markdown(f"""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — {sel_month.upper()} {sel_year}</div>
-      <div class='main-header-subtitle'>Moneda Principal: {curr_code} | Conversión TRM Histórica y En Tiempo Real</div>
+      <div class='main-header-subtitle'>Moneda Principal: {curr_code} | Gestión en Tiempo Real</div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1049,9 +1075,7 @@ if menu_selection == "📅 Presupuesto Mensual":
         
     st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
     
-    # ------------------------------------------
-    # BOTÓN DE EXPORTACIÓN A EXCEL (XLSX) Y CSV
-    # ------------------------------------------
+    # EXPORTACIÓN
     with st.expander("📥 Exportar Información Financiera (Excel / CSV)"):
         with st.form("form_export_data"):
             exp_scope = st.selectbox("Alcance de Exportación", ["Mes Actual (" + sel_month + " " + sel_year + ")", "Todo el Año (" + sel_year + ")", "Historial Completo"])
@@ -1125,13 +1149,13 @@ if menu_selection == "📅 Presupuesto Mensual":
     g_col1, g_col2 = st.columns(2)
     with g_col1:
         df_pie = pd.DataFrame({
-            "Categoría": ["Necesidades (50%)", "Deseos (30%)", "Ahorros (20%)"],
+            "Categoría": [f"{primary_class}", f"{secondary_class}", "Ahorros"],
             "Monto": [nec_total, des_total, total_ahorro]
         })
         fig_pie = px.pie(df_pie, names="Categoría", values="Monto" if df_pie["Monto"].sum() > 0 else [1,1,1], hole=0.55,
                          color_discrete_sequence=["#00385C", "#31B4D1", "#00ACA9"])
         fig_pie.update_layout(
-            title=dict(text=f"Distribución 50/30/20 ({curr_code})", x=0.5, xanchor="center", font=dict(size=14)),
+            title=dict(text=f"Distribución Presupuestaria ({curr_code})", x=0.5, xanchor="center", font=dict(size=14)),
             margin=dict(t=40, b=10, l=10, r=10),
             height=250
         )
@@ -1185,17 +1209,17 @@ if menu_selection == "📅 Presupuesto Mensual":
             df_fac_display["Monto"] = df_fac_display["Monto"].apply(lambda x: format_money(x, curr_code))
         st.dataframe(df_fac_display, use_container_width=True)
 
-        with st.expander("➕ Añadir Concepto de Factura (Con TRM y Selección de Fecha)"):
+        with st.expander("➕ Añadir Concepto de Factura (Con TRM y Fecha)"):
             with st.form(f"form_add_fac_{sel_year}_{sel_month}"):
                 new_f_desc = st.text_input("Descripción (ej. Renta, Agua, Luz)")
                 c_m1, c_m2 = st.columns(2)
                 with c_m1:
-                    raw_f_monto = st.number_input("Monto en moneda de origen", min_value=0.0, step=10.0, format="%.2f")
+                    raw_f_monto = st.number_input("Monto en origen", min_value=0.0, step=10.0, format="%.2f")
                 with c_m2:
-                    tx_curr = st.selectbox("Moneda de Transacción", ["COP", "USD", "EUR"], key="fac_tx_curr")
+                    tx_curr = st.selectbox("Moneda", ["COP", "USD", "EUR"], key="fac_tx_curr")
                 
-                new_f_tipo = st.selectbox("Clasificación 50/30/20", ["Necesidades", "Deseos"])
-                trans_date = st.date_input("Fecha de la Transacción", value=datetime.now())
+                new_f_tipo = st.selectbox("Clasificación", user_cats["clasificaciones"])
+                trans_date = st.date_input("Fecha de Transacción", value=datetime.now())
                 
                 btn_add_f = st.form_submit_button("Agregar Factura con TRM", use_container_width=True)
                 
@@ -1216,7 +1240,7 @@ if menu_selection == "📅 Presupuesto Mensual":
                         user_fin[sel_year][sel_month] = raw_month
                         all_finances[current_email] = user_fin
                         save_all_finances(all_finances)
-                        st.success(f"Factura agregada con fecha {date_str} y convertida a {curr_code} ({format_money(converted_monto, curr_code)}).")
+                        st.success(f"Factura agregada y convertida a {curr_code} ({format_money(converted_monto, curr_code)}).")
                         st.rerun()
                     else:
                         st.warning("Escribe una descripción.")
@@ -1230,7 +1254,7 @@ if menu_selection == "📅 Presupuesto Mensual":
                 with st.form(f"form_edit_fac_{sel_year}_{sel_month}"):
                     edit_f_desc = st.text_input("Descripción", value=current_f["Descripción"])
                     edit_f_monto = st.number_input(f"Monto ({curr_code})", min_value=0.0, value=float(current_f["Monto"]), step=10.0, format="%.2f")
-                    edit_f_tipo = st.selectbox("Tipo", ["Necesidades", "Deseos"], index=0 if current_f["Tipo"] == "Necesidades" else 1)
+                    edit_f_tipo = st.selectbox("Clasificación", user_cats["clasificaciones"], index=0 if current_f["Tipo"] in user_cats["clasificaciones"] else 0)
                     edit_f_fecha = st.text_input("Fecha", value=str(current_f["Fecha"]))
                     
                     c_save, c_del = st.columns(2)
@@ -1272,14 +1296,14 @@ if menu_selection == "📅 Presupuesto Mensual":
 
         with st.expander("➕ Añadir Categoría de Gasto Variable (Con TRM y Fecha)"):
             with st.form(f"form_add_gv_{sel_year}_{sel_month}"):
-                new_gv_cat = st.text_input("Categoría (ej. Mercado, Gasolina, Ocio)")
+                new_gv_cat = st.selectbox("Categoría de Gasto", user_cats["gastos_variables"])
                 c_v1, c_v2 = st.columns(2)
                 with c_v1:
-                    raw_v_monto = st.number_input("Monto en moneda de origen", min_value=0.0, step=10.0, format="%.2f", key="gv_raw_monto")
+                    raw_v_monto = st.number_input("Monto en origen", min_value=0.0, step=10.0, format="%.2f", key="gv_raw_monto")
                 with c_v2:
                     tx_curr_v = st.selectbox("Moneda", ["COP", "USD", "EUR"], key="gv_tx_curr")
                 
-                new_gv_tipo = st.selectbox("Clasificación", ["Necesidades", "Deseos"], key=f"new_gv_tipo_{sel_year}_{sel_month}")
+                new_gv_tipo = st.selectbox("Clasificación", user_cats["clasificaciones"], key=f"new_gv_tipo_{sel_year}_{sel_month}")
                 trans_date_v = st.date_input("Fecha de Transacción", value=datetime.now(), key="gv_date")
                 
                 btn_add_gv = st.form_submit_button("Agregar Categoría con TRM", use_container_width=True)
@@ -1300,10 +1324,10 @@ if menu_selection == "📅 Presupuesto Mensual":
                         user_fin[sel_year][sel_month] = raw_month
                         all_finances[current_email] = user_fin
                         save_all_finances(all_finances)
-                        st.success(f"Categoría agregada con fecha {date_str_v} y convertida a {curr_code} ({format_money(converted_v, curr_code)}).")
+                        st.success(f"Gasto variable agregado y convertido a {curr_code} ({format_money(converted_v, curr_code)}).")
                         st.rerun()
                     else:
-                        st.warning("Escribe una categoría.")
+                        st.warning("Selecciona una categoría.")
 
         with st.expander("✏️ Lápiz de Edición: Modificar Gasto Variable"):
             if not df_var.empty:
@@ -1314,7 +1338,7 @@ if menu_selection == "📅 Presupuesto Mensual":
                 with st.form(f"form_edit_gv_{sel_year}_{sel_month}"):
                     edit_gv_cat = st.text_input("Categoría", value=current_gv["Categoría"])
                     edit_gv_monto = st.number_input(f"Monto ({curr_code})", min_value=0.0, value=float(current_gv["Monto"]), step=10.0, format="%.2f")
-                    edit_gv_tipo = st.selectbox("Tipo", ["Necesidades", "Deseos"], index=0 if current_gv["Tipo"] == "Necesidades" else 1, key=f"ed_gv_tipo_{sel_year}_{sel_month}")
+                    edit_gv_tipo = st.selectbox("Clasificación", user_cats["clasificaciones"], index=0 if current_gv["Tipo"] in user_cats["clasificaciones"] else 0, key=f"ed_gv_tipo_{sel_year}_{sel_month}")
                     
                     c_save, c_del = st.columns(2)
                     with c_save:
@@ -1452,7 +1476,7 @@ if menu_selection == "📅 Presupuesto Mensual":
                 current_seg = df_seg.iloc[selected_seg_idx]
                 with st.form(f"form_edit_seg_{sel_year}_{sel_month}"):
                     edit_seg_monto = st.number_input(f"Monto ({curr_code})", min_value=0.0, value=float(current_seg["Monto"]), step=5.0, format="%.2f")
-                    edit_seg_cat = st.text_input("Categoría", value=current_seg["Categoría"])
+                    edit_seg_cat = st.selectbox("Categoría", user_cats["gastos_variables"], index=0 if current_seg["Categoría"] in user_cats["gastos_variables"] else 0)
                     edit_seg_det = st.text_input("Detalle", value=str(current_seg.get("Detalle", "")))
                     
                     c_s_save, c_s_del = st.columns(2)
@@ -1492,10 +1516,7 @@ if menu_selection == "📅 Presupuesto Mensual":
             with c_s2:
                 tx_curr_s = st.selectbox("Moneda", ["COP", "USD", "EUR"], key="seg_tx_curr")
                 
-            seg_cat = st.selectbox("Categoría", [
-                "Mercado y Alimentación", "Transporte / Combustible", "Restaurantes y Salidas", "Entretenimiento y Ocio",
-                "Salud y Medicamentos", "Mascotas", "Cuidado Personal", "Hogar", "Ropa", "Educación", "Misceláneos"
-            ])
+            seg_cat = st.selectbox("Categoría", user_cats["gastos_variables"])
             c_d1, c_d2 = st.columns(2)
             with c_d1:
                 trans_date_s = st.date_input("Fecha", value=datetime.now(), key="seg_date")
@@ -1717,7 +1738,68 @@ elif menu_selection == "📈 Horizontes Financieros":
         st.dataframe(df_lp.style.format({"Aporte Acumulado": lambda x: format_money(x, curr_code), "Rendimientos / Interés Compuesto": lambda x: format_money(x, curr_code), "Patrimonio Total Estimado": lambda x: format_money(x, curr_code)}), use_container_width=True)
 
 # ==========================================
-# 11. PANEL DE ADMINISTRACIÓN
+# 11. NUEVO MÓDULO: CATEGORÍAS & CLASIFICACIONES
+# ==========================================
+elif menu_selection == "🏷️ Categorías & Clasificaciones":
+    st.markdown("""
+    <div class='main-header-banner'>
+      <div class='main-header-title'>OptiBudget Pro — GESTIÓN DE ETIQUETAS Y CATEGORÍAS</div>
+      <div class='main-header-subtitle'>Personaliza las clasificaciones (ej. Necesidades) y los tipos de gastos variables de tu presupuesto</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    t_class, t_vars = st.tabs(["🏷️ Gestionar Clasificaciones (50/30/20)", "🛒 Gestionar Gastos Variables"])
+    
+    with t_class:
+        st.subheader("Clasificaciones Presupuestarias Activas")
+        st.info("Puedes agregar nuevas etiquetas de clasificación para tus gastos y facturas (ej. Necesidades, Deseos, Inversión, etc.).")
+        
+        current_classes = user_cats.get("clasificaciones", ["Necesidades", "Deseos", "Ahorros"])
+        df_class = pd.DataFrame({"Clasificación": current_classes})
+        
+        edited_class = st.data_editor(
+            df_class,
+            num_rows="dynamic",
+            use_container_width=True,
+            key="editor_clasificaciones"
+        )
+        
+        if st.button("💾 Guardar Cambios en Clasificaciones", use_container_width=True):
+            new_list = [c.strip() for c in edited_class["Clasificación"].tolist() if str(c).strip()]
+            if new_list:
+                user_cats["clasificaciones"] = new_list
+                save_user_categories(current_email, user_cats)
+                st.success("¡Clasificaciones actualizadas con éxito!")
+                st.rerun()
+            else:
+                st.warning("Debe existir al menos una clasificación.")
+
+    with t_vars:
+        st.subheader("Listado de Categorías de Gastos Variables")
+        st.info("Personaliza las categorías que aparecen al registrar tus gastos variables y transacciones diarias.")
+        
+        current_vars = user_cats.get("gastos_variables", [])
+        df_vars = pd.DataFrame({"Categoría": current_vars})
+        
+        edited_vars = st.data_editor(
+            df_vars,
+            num_rows="dynamic",
+            use_container_width=True,
+            key="editor_gastos_variables"
+        )
+        
+        if st.button("💾 Guardar Cambios en Gastos Variables", use_container_width=True):
+            new_v_list = [v.strip() for v in edited_vars["Categoría"].tolist() if str(v).strip()]
+            if new_v_list:
+                user_cats["gastos_variables"] = new_v_list
+                save_user_categories(current_email, user_cats)
+                st.success("¡Categorías de gastos variables actualizadas con éxito!")
+                st.rerun()
+            else:
+                st.warning("Debe existir al menos una categoría.")
+
+# ==========================================
+# 12. PANEL DE ADMINISTRACIÓN
 # ==========================================
 elif menu_selection == "👑 Panel de Administración":
     st.markdown("""
