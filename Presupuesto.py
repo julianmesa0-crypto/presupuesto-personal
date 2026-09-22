@@ -744,7 +744,7 @@ with st.sidebar:
       <div style='font-size: 1.35rem;'>💼</div>
       <div>
         <div style='font-size: 1.15rem; font-weight: 800; color: #FFFFFF !important; line-height: 1.1;'>OptiBudget Pro</div>
-        <div style='font-size: 0.72rem; color: #FFFFFF !important; text-transform: uppercase; letter-spacing: 0.8px;'>SAP ByDesign Edition</div>
+        <div style='font-size: 0.72rem; color: #FFFFFF !important; text-transform: uppercase; letter-spacing: 0.8px;'>By Soltein Julian Mesa Holguin</div>
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -760,6 +760,7 @@ with st.sidebar:
         else:
             st.success("✅ No tienes tareas pendientes. ¡Todo al día!")
 
+    # Tarjeta de Usuario Activo
     st.markdown(f"""
     <div class='sap-user-card'>
       <div style='font-size: 0.68rem; color: #FFFFFF !important; font-weight: 800; text-transform: uppercase;'>Usuario Activo</div>
