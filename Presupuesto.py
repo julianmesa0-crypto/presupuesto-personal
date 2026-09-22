@@ -344,7 +344,7 @@ setTimeout(() => {
 st.markdown(inactivity_and_sync_js, unsafe_allow_html=True)
 
 # ==========================================
-# 4. ESTILOS CSS CON BOTONES DE CREAR MES/AÑO ADAPTABLES AL TEMA DEL SISTEMA
+# 4. ESTILOS CSS CON BOTONES ADAPTABLES AL TEMA DEL SISTEMA
 # ==========================================
 st.markdown("""
 <style>
@@ -354,7 +354,6 @@ html, body, .stApp {
   font-family: 'Nunito Sans', sans-serif !important;
 }
 
-/* SIDEBAR ESTILO SAP BYDESIGN COLOR #29AFE2 CON LETRAS BLANCAS */
 [data-testid="stSidebar"], [data-testid="stSidebarContent"] {
   background-color: #29afe2 !important;
   border-right: 1.5px solid #1e98c7 !important;
@@ -911,26 +910,35 @@ with st.sidebar:
     else:
         st.caption("✅ Todos los meses de este año están creados.")
 
-    st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
-    if st.button("🗑️ Eliminar Mes Activo", use_container_width=True):
-        if len(months_in_active_year) <= 1:
-            st.error("No puedes eliminar el único mes restante del año.")
-        else:
-            del user_fin[sel_year][sel_month]
-            all_finances[current_email] = user_fin
-            save_all_finances(all_finances)
-            st.success(f"Mes {sel_month} eliminado correctamente.")
-            st.rerun()
+    # OPINIÓN: ELIMINAR MES ESPECÍFICO
+    with st.expander("🗑️ Eliminar Mes"):
+        with st.form("form_delete_specific_month"):
+            month_to_del = st.selectbox("Seleccione el mes a eliminar", months_in_active_year)
+            btn_del_month = st.form_submit_button("Borrar Mes Seleccionado", use_container_width=True)
+            if btn_del_month:
+                if len(months_in_active_year) <= 1:
+                    st.error("No puedes eliminar el único mes restante del año.")
+                else:
+                    del user_fin[sel_year][month_to_del]
+                    all_finances[current_email] = user_fin
+                    save_all_finances(all_finances)
+                    st.success(f"Mes {month_to_del} eliminado correctamente.")
+                    st.rerun()
 
-    if st.button("🗑️ Eliminar Año Activo", use_container_width=True):
-        if len(created_years) <= 1:
-            st.error("No puedes eliminar el único año fiscal existente.")
-        else:
-            del user_fin[sel_year]
-            all_finances[current_email] = user_fin
-            save_all_finances(all_finances)
-            st.success(f"Año {sel_year} eliminado correctamente.")
-            st.rerun()
+    # OPINIÓN: ELIMINAR AÑO ESPECÍFICO
+    with st.expander("🗑️ Eliminar Año"):
+        with st.form("form_delete_specific_year"):
+            year_to_del = st.selectbox("Seleccione el año a eliminar", created_years)
+            btn_del_year = st.form_submit_button("Borrar Año Seleccionado", use_container_width=True)
+            if btn_del_year:
+                if len(created_years) <= 1:
+                    st.error("No puedes eliminar el único año fiscal existente.")
+                else:
+                    del user_fin[year_to_del]
+                    all_finances[current_email] = user_fin
+                    save_all_finances(all_finances)
+                    st.success(f"Año {year_to_del} eliminado correctamente.")
+                    st.rerun()
 
     st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
     if st.button("🚪 Cerrar Sesión", use_container_width=True):
@@ -975,7 +983,7 @@ curr_code = user_sets.get("currency", "COP")
 curr_symbol = {"COP": "$", "USD": "US$", "EUR": "€"}.get(curr_code, "$")
 
 # ==========================================
-# 8. VISTA: PRESUPUESTO MENSUAL (REACTIVO & TRM & FECHA & EXPORTACIÓN & ELIMINAR MES/AÑO)
+# 8. VISTA: PRESUPUESTO MENSUAL (REACTIVO & TRM & FECHA & EXPORTACIÓN)
 # ==========================================
 if menu_selection == "📅 Presupuesto Mensual":
     raw_month = user_fin[sel_year][sel_month]
