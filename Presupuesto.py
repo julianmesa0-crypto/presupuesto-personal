@@ -718,7 +718,7 @@ if user_info.get("must_change_password", False):
     st.stop()
 
 # ==========================================
-# 7. MENÚ LATERAL ESTILO SAP BYDESIGN & CONFIGURACIÓN
+# 7. MENÚ LATERAL ESTILO SAP BYDESIGN Y CONFIGURACIÓN DE MONEDA / TRM
 # ==========================================
 is_admin = user_info["role"] == "Superusuario"
 init_user_finances(current_email)
@@ -787,8 +787,9 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # CONFIGURACIÓN DE MONEDA Y TRM
+    # CONFIGURACIÓN DE MONEDA PRINCIPAL Y TRM EN EL SIDEBAR (AUTOMÁTICA O MANUAL)
     st.markdown("<div class='sap-work-center-header'>Configuración Monetaria & TRM</div>", unsafe_allow_html=True)
+    
     if st.button("🌐 Sincronizar TRM de Internet", use_container_width=True):
         live_u, live_e = fetch_live_trm_rates()
         user_sets["trm_usd_cop"] = live_u
@@ -800,10 +801,12 @@ with st.sidebar:
     with st.form("form_currency_settings"):
         curr_options = ["COP", "USD", "EUR"]
         selected_curr = st.selectbox("Moneda Principal", curr_options, index=curr_options.index(user_sets.get("currency", "COP")))
+        
         trm_usd = st.number_input("TRM USD a COP", value=float(user_sets.get("trm_usd_cop", 4100.0)), step=10.0)
         trm_eur = st.number_input("TRM EUR a COP", value=float(user_sets.get("trm_eur_cop", 4450.0)), step=10.0)
         
-        if st.form_submit_button("Actualizar Divisa", use_container_width=True):
+        btn_save_sets = st.form_submit_button("Actualizar Divisa", use_container_width=True)
+        if btn_save_sets:
             user_sets["currency"] = selected_curr
             user_sets["trm_usd_cop"] = trm_usd
             user_sets["trm_eur_cop"] = trm_eur
@@ -811,6 +814,7 @@ with st.sidebar:
             st.success("Moneda principal actualizada.")
             st.rerun()
 
+    # Indicador dinámico de TRM adaptado a la moneda principal seleccionada
     main_curr = user_sets.get("currency", "COP")
     u_val = user_sets.get('trm_usd_cop', 4100)
     e_val = user_sets.get('trm_eur_cop', 4450)
@@ -961,6 +965,7 @@ with st.sidebar:
         st.session_state.current_user = None
         st.rerun()
 
+# Función de conversión TRM a la moneda principal del usuario
 def convert_to_main_currency(amount, transaction_currency, sets):
     main_curr = sets.get("currency", "COP")
     trm_usd = float(sets.get("trm_usd_cop", 4100.0))
@@ -995,7 +1000,7 @@ curr_code = user_sets.get("currency", "COP")
 curr_symbol = {"COP": "$", "USD": "US$", "EUR": "€"}.get(curr_code, "$")
 
 # ==========================================
-# 8. VISTA: PRESUPUESTO MENSUAL
+# 8. VISTA: PRESUPUESTO MENSUAL (REACTIVO & TRM & FECHA & EXPORTACIÓN)
 # ==========================================
 if menu_selection == "📅 Presupuesto Mensual":
     raw_month = user_fin[sel_year][sel_month]
@@ -1039,7 +1044,7 @@ if menu_selection == "📅 Presupuesto Mensual":
     st.markdown(f"""
     <div class='main-header-banner'>
       <div class='main-header-title'>OptiBudget Pro — {sel_month.upper()} {sel_year}</div>
-      <div class='main-header-subtitle'>Moneda Principal: {curr_code} | Gestión en Tiempo Real</div>
+      <div class='main-header-subtitle'>Moneda Principal: {curr_code} | Conversión TRM Histórica y En Tiempo Real</div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1075,7 +1080,9 @@ if menu_selection == "📅 Presupuesto Mensual":
         
     st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
     
-    # EXPORTACIÓN
+    # ------------------------------------------
+    # BOTÓN DE EXPORTACIÓN A EXCEL (XLSX) Y CSV
+    # ------------------------------------------
     with st.expander("📥 Exportar Información Financiera (Excel / CSV)"):
         with st.form("form_export_data"):
             exp_scope = st.selectbox("Alcance de Exportación", ["Mes Actual (" + sel_month + " " + sel_year + ")", "Todo el Año (" + sel_year + ")", "Historial Completo"])
@@ -1209,7 +1216,7 @@ if menu_selection == "📅 Presupuesto Mensual":
             df_fac_display["Monto"] = df_fac_display["Monto"].apply(lambda x: format_money(x, curr_code))
         st.dataframe(df_fac_display, use_container_width=True)
 
-        with st.expander("➕ Añadir Concepto de Factura (Con TRM y Fecha)"):
+        with st.expander("➕ Añadir Concepto de Factura (Con TRM y Selección de Fecha)"):
             with st.form(f"form_add_fac_{sel_year}_{sel_month}"):
                 new_f_desc = st.text_input("Descripción (ej. Renta, Agua, Luz)")
                 c_m1, c_m2 = st.columns(2)
@@ -1240,7 +1247,7 @@ if menu_selection == "📅 Presupuesto Mensual":
                         user_fin[sel_year][sel_month] = raw_month
                         all_finances[current_email] = user_fin
                         save_all_finances(all_finances)
-                        st.success(f"Factura agregada y convertida a {curr_code} ({format_money(converted_monto, curr_code)}).")
+                        st.success(f"Factura agregada con fecha {date_str} y convertida a {curr_code} ({format_money(converted_monto, curr_code)}).")
                         st.rerun()
                     else:
                         st.warning("Escribe una descripción.")
